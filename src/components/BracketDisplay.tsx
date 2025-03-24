@@ -1,5 +1,12 @@
 import { useState, useEffect } from "react";
-import { Box, Typography, Button, TextField } from "@mui/material";
+import {
+  Box,
+  Typography,
+  Button,
+  TextField,
+  FormControlLabel,
+  Checkbox,
+} from "@mui/material";
 import { styled } from "@mui/material/styles";
 import type { Team, Matchup } from "../utils/bracketTransform";
 import { gameCodeToIndex } from "../utils/bracketTransform";
@@ -126,13 +133,19 @@ const MatchupContainer = styled(Box)({
   margin: "4px 0",
 });
 
-const GameCodeLabel = styled(Typography)(({ theme }) => ({
+interface GameCodeLabelProps {
+  showGameCode: boolean;
+}
+
+const GameCodeLabel = styled(Typography, {
+  shouldForwardProp: (prop) => prop !== "showGameCode",
+})<GameCodeLabelProps>(({ theme, showGameCode }) => ({
   position: "absolute",
   left: "-24px",
   top: "50%",
   transform: "translateY(-50%)",
   fontSize: "0.75rem",
-  color: theme.palette.text.secondary,
+  color: showGameCode ? theme.palette.text.secondary : "white",
   fontWeight: "bold",
 }));
 
@@ -337,6 +350,7 @@ export default function BracketDisplay({
   totalScore,
 }: BracketDisplayProps) {
   const [matchups, setMatchups] = useState<Matchup[]>(initialMatchups);
+  const [showGameCode, setShowGameCode] = useState(true);
 
   useEffect(() => {
     setMatchups(initialMatchups);
@@ -414,7 +428,9 @@ export default function BracketDisplay({
 
     return (
       <MatchupWrapper key={matchup.gameCode}>
-        <GameCodeLabel>{matchup.gameCode}</GameCodeLabel>
+        <GameCodeLabel showGameCode={showGameCode}>
+          {matchup.gameCode}
+        </GameCodeLabel>
         <Team
           team={matchup.topTeam}
           isWinner={topTeamWon}
@@ -603,6 +619,7 @@ export default function BracketDisplay({
     <Box
       sx={{
         display: "flex",
+        flexDirection: "column",
         justifyContent: "center",
         gap: 4,
         p: 2,
@@ -612,25 +629,44 @@ export default function BracketDisplay({
       <Box
         sx={{
           display: "flex",
-          flexDirection: "column",
-          gap: 4,
           justifyContent: "center",
+          gap: 4,
         }}
       >
-        {renderRegion("South", 30)}
-        {renderRegion("West", 15)}
+        <Box
+          sx={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 4,
+            justifyContent: "center",
+          }}
+        >
+          {renderRegion("South", 30)}
+          {renderRegion("West", 15)}
+        </Box>
+        {renderFinalFour()}
+        <Box
+          sx={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 4,
+            justifyContent: "center",
+          }}
+        >
+          {renderRegion("East", 0, true)}
+          {renderRegion("Midwest", 45, true)}
+        </Box>
       </Box>
-      {renderFinalFour()}
-      <Box
-        sx={{
-          display: "flex",
-          flexDirection: "column",
-          gap: 4,
-          justifyContent: "center",
-        }}
-      >
-        {renderRegion("East", 0, true)}
-        {renderRegion("Midwest", 45, true)}
+      <Box sx={{ display: "flex", justifyContent: "center", mt: 2 }}>
+        <FormControlLabel
+          control={
+            <Checkbox
+              checked={showGameCode}
+              onChange={(e) => setShowGameCode(e.target.checked)}
+            />
+          }
+          label="Show Game Code"
+        />
       </Box>
     </Box>
   );
