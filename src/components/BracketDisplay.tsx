@@ -375,21 +375,31 @@ export default function BracketDisplay({
     // Update current matchup
     currentMatchup.winner = position;
 
-    // Update next matchup if it exists
-    if (
-      currentMatchup.nextMatchupIndex !== undefined &&
-      currentMatchup.nextPosition !== undefined
-    ) {
-      const nextMatchup = newMatchups[currentMatchup.nextMatchupIndex];
-      if (nextMatchup) {
-        if (currentMatchup.nextPosition === "top") {
+    // Find all subsequent matchups that need to be cleared
+    let currentIndex = matchupIndex;
+    while (newMatchups[currentIndex].nextMatchupIndex !== undefined) {
+      const nextIndex = newMatchups[currentIndex].nextMatchupIndex;
+      if (nextIndex === undefined) break;
+
+      const nextMatchup = newMatchups[nextIndex];
+
+      // Clear the winner
+      nextMatchup.winner = undefined;
+
+      // If this is the first next matchup, update the team
+      if (currentIndex === matchupIndex) {
+        if (newMatchups[currentIndex].nextPosition === "top") {
           nextMatchup.topTeam = selectedTeam;
         } else {
           nextMatchup.bottomTeam = selectedTeam;
         }
-        // Clear the winner of the next matchup when updating its teams
-        nextMatchup.winner = undefined;
+      } else {
+        // For all subsequent matchups, set both teams to TBD
+        nextMatchup.topTeam = { name: "TBD", seed: "0" };
+        nextMatchup.bottomTeam = { name: "TBD", seed: "0" };
       }
+
+      currentIndex = nextIndex;
     }
 
     setMatchups(newMatchups);
