@@ -313,9 +313,9 @@ function Team({
         onClick={onClick}
         sx={{
           bgcolor: isActualTeam
-            ? "success.light"
+            ? "rgba(76, 175, 80, 0.15)"
             : isIncorrect
-            ? "error.light"
+            ? "rgba(244, 67, 54, 0.15)"
             : "background.paper",
           textDecoration: isIncorrect ? "line-through" : "none",
           position: "relative",
@@ -350,7 +350,7 @@ export default function BracketDisplay({
   totalScore,
 }: BracketDisplayProps) {
   const [matchups, setMatchups] = useState<Matchup[]>(initialMatchups);
-  const [showGameCode, setShowGameCode] = useState(true);
+  const [showGameCode, setShowGameCode] = useState(false);
 
   useEffect(() => {
     setMatchups(initialMatchups);
