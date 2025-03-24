@@ -1,0 +1,563 @@
+{
+  "regions": {
+    "East": {
+      "rounds": {
+        "Round of 64": [
+          {
+            "game_code": "E1",
+            "top": {
+              "seed": 1,
+              "name": "Duke"
+            },
+            "bottom": {
+              "seed": 16,
+              "name": "Mount St Mary's"
+            }
+          },
+          {
+            "game_code": "E2",
+            "top": {
+              "seed": 8,
+              "name": "Mississippi St"
+            },
+            "bottom": {
+              "seed": 9,
+              "name": "Baylor"
+            }
+          },
+          {
+            "game_code": "E3",
+            "top": {
+              "seed": 5,
+              "name": "Oregon"
+            },
+            "bottom": {
+              "seed": 12,
+              "name": "Liberty"
+            }
+          },
+          {
+            "game_code": "E4",
+            "top": {
+              "seed": 4,
+              "name": "Arizona"
+            },
+            "bottom": {
+              "seed": 13,
+              "name": "Akron"
+            }
+          },
+          {
+            "game_code": "E5",
+            "top": {
+              "seed": 6,
+              "name": "BYU"
+            },
+            "bottom": {
+              "seed": 11,
+              "name": "VCU"
+            }
+          },
+          {
+            "game_code": "E6",
+            "top": {
+              "seed": 3,
+              "name": "Wisconsin"
+            },
+            "bottom": {
+              "seed": 14,
+              "name": "Montana"
+            }
+          },
+          {
+            "game_code": "E7",
+            "top": {
+              "seed": 7,
+              "name": "Saint Mary's (CA)"
+            },
+            "bottom": {
+              "seed": 10,
+              "name": "Vanderbilt"
+            }
+          },
+          {
+            "game_code": "E8",
+            "top": {
+              "seed": 2,
+              "name": "Alabama"
+            },
+            "bottom": {
+              "seed": 15,
+              "name": "Robert Morris"
+            }
+          }
+        ],
+        "Round of 32": [
+          {
+            "game_code": "E9",
+            "top": "Winner of E1",
+            "bottom": "Winner of E2"
+          },
+          {
+            "game_code": "E10",
+            "top": "Winner of E3",
+            "bottom": "Winner of E4"
+          },
+          {
+            "game_code": "E11",
+            "top": "Winner of E5",
+            "bottom": "Winner of E6"
+          },
+          {
+            "game_code": "E12",
+            "top": "Winner of E7",
+            "bottom": "Winner of E8"
+          }
+        ],
+        "Sweet 16": [
+          {
+            "game_code": "E13",
+            "top": "Winner of E9",
+            "bottom": "Winner of E10"
+          },
+          {
+            "game_code": "E14",
+            "top": "Winner of E11",
+            "bottom": "Winner of E12"
+          }
+        ],
+        "Elite Eight": [
+          {
+            "game_code": "E15",
+            "top": "Winner of E13",
+            "bottom": "Winner of E14"
+          }
+        ]
+      }
+    },
+    "West": {
+      "rounds": {
+        "Round of 64": [
+          {
+            "game_code": "W1",
+            "top": {
+              "seed": 1,
+              "name": "Florida"
+            },
+            "bottom": {
+              "seed": 16,
+              "name": "Norfolk St"
+            }
+          },
+          {
+            "game_code": "W2",
+            "top": {
+              "seed": 8,
+              "name": "UConn"
+            },
+            "bottom": {
+              "seed": 9,
+              "name": "Oklahoma"
+            }
+          },
+          {
+            "game_code": "W3",
+            "top": {
+              "seed": 5,
+              "name": "Memphis"
+            },
+            "bottom": {
+              "seed": 12,
+              "name": "Colorado St"
+            }
+          },
+          {
+            "game_code": "W4",
+            "top": {
+              "seed": 4,
+              "name": "Maryland"
+            },
+            "bottom": {
+              "seed": 13,
+              "name": "Grand Canyon"
+            }
+          },
+          {
+            "game_code": "W5",
+            "top": {
+              "seed": 6,
+              "name": "Missouri"
+            },
+            "bottom": {
+              "seed": 11,
+              "name": "Drake"
+            }
+          },
+          {
+            "game_code": "W6",
+            "top": {
+              "seed": 3,
+              "name": "Texas Tech"
+            },
+            "bottom": {
+              "seed": 14,
+              "name": "UNCW"
+            }
+          },
+          {
+            "game_code": "W7",
+            "top": {
+              "seed": 7,
+              "name": "Kansas"
+            },
+            "bottom": {
+              "seed": 10,
+              "name": "Arkansas"
+            }
+          },
+          {
+            "game_code": "W8",
+            "top": {
+              "seed": 2,
+              "name": "St John's (NY)"
+            },
+            "bottom": {
+              "seed": 15,
+              "name": "Nebraska Omaha"
+            }
+          }
+        ],
+        "Round of 32": [
+          {
+            "game_code": "W9",
+            "top": "Winner of W1",
+            "bottom": "Winner of W2"
+          },
+          {
+            "game_code": "W10",
+            "top": "Winner of W4",
+            "bottom": "Winner of W3"
+          },
+          {
+            "game_code": "W11",
+            "top": "Winner of W5",
+            "bottom": "Winner of W6"
+          },
+          {
+            "game_code": "W12",
+            "top": "Winner of W8",
+            "bottom": "Winner of W7"
+          }
+        ],
+        "Sweet 16": [
+          {
+            "game_code": "W13",
+            "top": "Winner of W9",
+            "bottom": "Winner of W10"
+          },
+          {
+            "game_code": "W14",
+            "top": "Winner of W11",
+            "bottom": "Winner of W12"
+          }
+        ],
+        "Elite Eight": [
+          {
+            "game_code": "W15",
+            "top": "Winner of W13",
+            "bottom": "Winner of W14"
+          }
+        ]
+      }
+    },
+    "South": {
+      "rounds": {
+        "Round of 64": [
+          {
+            "game_code": "S1",
+            "top": {
+              "seed": 1,
+              "name": "Auburn"
+            },
+            "bottom": {
+              "seed": 16,
+              "name": "Alabama St"
+            }
+          },
+          {
+            "game_code": "S2",
+            "top": {
+              "seed": 8,
+              "name": "Louisville"
+            },
+            "bottom": {
+              "seed": 9,
+              "name": "Creighton"
+            }
+          },
+          {
+            "game_code": "S3",
+            "top": {
+              "seed": 5,
+              "name": "Michigan"
+            },
+            "bottom": {
+              "seed": 12,
+              "name": "UC San Diego"
+            }
+          },
+          {
+            "game_code": "S4",
+            "top": {
+              "seed": 4,
+              "name": "Texas A&M"
+            },
+            "bottom": {
+              "seed": 13,
+              "name": "Yale"
+            }
+          },
+          {
+            "game_code": "S5",
+            "top": {
+              "seed": 6,
+              "name": "Ole Miss"
+            },
+            "bottom": {
+              "seed": 11,
+              "name": "N. Carolina"
+            }
+          },
+          {
+            "game_code": "S6",
+            "top": {
+              "seed": 3,
+              "name": "Iowa St"
+            },
+            "bottom": {
+              "seed": 14,
+              "name": "Lipscomb"
+            }
+          },
+          {
+            "game_code": "S7",
+            "top": {
+              "seed": 7,
+              "name": "Marquette"
+            },
+            "bottom": {
+              "seed": 10,
+              "name": "New Mexico"
+            }
+          },
+          {
+            "game_code": "S8",
+            "top": {
+              "seed": 2,
+              "name": "Michigan St"
+            },
+            "bottom": {
+              "seed": 15,
+              "name": "Bryant"
+            }
+          }
+        ],
+        "Round of 32": [
+          {
+            "game_code": "S9",
+            "top": "Winner of S1",
+            "bottom": "Winner of S2"
+          },
+          {
+            "game_code": "S10",
+            "top": "Winner of S3",
+            "bottom": "Winner of S4"
+          },
+          {
+            "game_code": "S11",
+            "top": "Winner of S5",
+            "bottom": "Winner of S6"
+          },
+          {
+            "game_code": "S12",
+            "top": "Winner of S7",
+            "bottom": "Winner of S8"
+          }
+        ],
+        "Sweet 16": [
+          {
+            "game_code": "S13",
+            "top": "Winner of S9",
+            "bottom": "Winner of S10"
+          },
+          {
+            "game_code": "S14",
+            "top": "Winner of S11",
+            "bottom": "Winner of S12"
+          }
+        ],
+        "Elite Eight": [
+          {
+            "game_code": "S15",
+            "top": "Winner of S13",
+            "bottom": "Winner of S14"
+          }
+        ]
+      }
+    },
+    "Midwest": {
+      "rounds": {
+        "Round of 64": [
+          {
+            "game_code": "M1",
+            "top": {
+              "seed": 1,
+              "name": "Houston"
+            },
+            "bottom": {
+              "seed": 16,
+              "name": "SIU Edwardsville"
+            }
+          },
+          {
+            "game_code": "M2",
+            "top": {
+              "seed": 8,
+              "name": "Gonzaga"
+            },
+            "bottom": {
+              "seed": 9,
+              "name": "Georgia"
+            }
+          },
+          {
+            "game_code": "M3",
+            "top": {
+              "seed": 5,
+              "name": "Clemson"
+            },
+            "bottom": {
+              "seed": 12,
+              "name": "McNeese"
+            }
+          },
+          {
+            "game_code": "M4",
+            "top": {
+              "seed": 4,
+              "name": "Purdue"
+            },
+            "bottom": {
+              "seed": 13,
+              "name": "High Point"
+            }
+          },
+          {
+            "game_code": "M5",
+            "top": {
+              "seed": 6,
+              "name": "Illinois"
+            },
+            "bottom": {
+              "seed": 11,
+              "name": "Xavier"
+            }
+          },
+          {
+            "game_code": "M6",
+            "top": {
+              "seed": 3,
+              "name": "Kentucky"
+            },
+            "bottom": {
+              "seed": 14,
+              "name": "Troy"
+            }
+          },
+          {
+            "game_code": "M7",
+            "top": {
+              "seed": 7,
+              "name": "UCLA"
+            },
+            "bottom": {
+              "seed": 10,
+              "name": "Utah St"
+            }
+          },
+          {
+            "game_code": "M8",
+            "top": {
+              "seed": 2,
+              "name": "Tennessee"
+            },
+            "bottom": {
+              "seed": 15,
+              "name": "Wofford"
+            }
+          }
+        ],
+        "Round of 32": [
+          {
+            "game_code": "M9",
+            "top": "Winner of M1",
+            "bottom": "Winner of M2"
+          },
+          {
+            "game_code": "M10",
+            "top": "Winner of M3",
+            "bottom": "Winner of M4"
+          },
+          {
+            "game_code": "M11",
+            "top": "Winner of M5",
+            "bottom": "Winner of M6"
+          },
+          {
+            "game_code": "M12",
+            "top": "Winner of M7",
+            "bottom": "Winner of M8"
+          }
+        ],
+        "Sweet 16": [
+          {
+            "game_code": "M13",
+            "top": "Winner of M9",
+            "bottom": "Winner of M10"
+          },
+          {
+            "game_code": "M14",
+            "top": "Winner of M11",
+            "bottom": "Winner of M12"
+          }
+        ],
+        "Elite Eight": [
+          {
+            "game_code": "M15",
+            "top": "Winner of M13",
+            "bottom": "Winner of M14"
+          }
+        ]
+      }
+    }
+  },
+  "final_four": {
+    "games": [
+      {
+        "game_code": "FF1",
+        "top": "Winner of E15",
+        "bottom": "Winner of M15"
+      },
+      {
+        "game_code": "FF2",
+        "top": "Winner of S15",
+        "bottom": "Winner of W15"
+      }
+    ]
+  },
+  "championship": {
+    "game_code": "CH1",
+    "top": "Winner of FF1",
+    "bottom": "Winner of FF2"
+  }
+}

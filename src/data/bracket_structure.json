@@ -1,0 +1,128 @@
+{
+  "regions": {
+    "East": {
+      "rounds": {
+        "Round of 64": [
+          { "game_code": "E1", "teams": ["Duke", "Saint Francis"] },
+          { "game_code": "E2", "teams": ["Alabama", "Robert Morris"] },
+          { "game_code": "E3", "teams": ["Wisconsin", "Montana"] },
+          { "game_code": "E4", "teams": ["Arizona", "Akron"] },
+          { "game_code": "E5", "teams": ["Oregon", "Liberty"] },
+          { "game_code": "E6", "teams": ["BYU", "VCU"] },
+          { "game_code": "E7", "teams": ["Saint Mary's", "Vanderbilt"] },
+          { "game_code": "E8", "teams": ["Mississippi State", "Baylor"] }
+        ],
+        "Round of 32": [
+          { "game_code": "E9", "matchup": "Winner of E1 vs. Winner of E8" },
+          { "game_code": "E10", "matchup": "Winner of E4 vs. Winner of E5" },
+          { "game_code": "E11", "matchup": "Winner of E3 vs. Winner of E6" },
+          { "game_code": "E12", "matchup": "Winner of E2 vs. Winner of E7" }
+        ],
+        "Sweet 16": [
+          { "game_code": "E13", "matchup": "Winner of E9 vs. Winner of E10" },
+          { "game_code": "E14", "matchup": "Winner of E11 vs. Winner of E12" }
+        ],
+        "Elite Eight": [
+          { "game_code": "E15", "matchup": "Winner of E13 vs. Winner of E14" }
+        ]
+      }
+    },
+    "West": {
+      "rounds": {
+        "Round of 64": [
+          { "game_code": "W1", "teams": ["Florida", "Alabama State"] },
+          { "game_code": "W2", "teams": ["Michigan State", "Bryant"] },
+          { "game_code": "W3", "teams": ["UConn", "Oklahoma"] },
+          { "game_code": "W4", "teams": ["Illinois", "Xavier"] },
+          { "game_code": "W5", "teams": ["Kentucky", "Troy"] },
+          { "game_code": "W6", "teams": ["Ole Miss", "North Carolina"] },
+          { "game_code": "W7", "teams": ["Maryland", "Grand Canyon"] },
+          { "game_code": "W8", "teams": ["Gonzaga", "Georgia"] }
+        ],
+        "Round of 32": [
+          { "game_code": "W9", "matchup": "Winner of W1 vs. Winner of W8" },
+          { "game_code": "W10", "matchup": "Winner of W4 vs. Winner of W5" },
+          { "game_code": "W11", "matchup": "Winner of W3 vs. Winner of W6" },
+          { "game_code": "W12", "matchup": "Winner of W2 vs. Winner of W7" }
+        ],
+        "Sweet 16": [
+          { "game_code": "W13", "matchup": "Winner of W9 vs. Winner of W10" },
+          { "game_code": "W14", "matchup": "Winner of W11 vs. Winner of W12" }
+        ],
+        "Elite Eight": [
+          { "game_code": "W15", "matchup": "Winner of W13 vs. Winner of W14" }
+        ]
+      }
+    },
+    "South": {
+      "rounds": {
+        "Round of 64": [
+          { "game_code": "S1", "teams": ["Auburn", "Norfolk State"] },
+          { "game_code": "S2", "teams": ["St. John's", "Colgate"] },
+          { "game_code": "S3", "teams": ["North Carolina", "Vermont"] },
+          { "game_code": "S4", "teams": ["Texas A&M", "UC Santa Barbara"] },
+          { "game_code": "S5", "teams": ["Marquette", "Drake"] },
+          { "game_code": "S6", "teams": ["Indiana", "Providence"] },
+          { "game_code": "S7", "teams": ["USC", "New Mexico"] },
+          { "game_code": "S8", "teams": ["Arkansas", "Colorado State"] }
+        ],
+        "Round of 32": [
+          { "game_code": "S9", "matchup": "Winner of S1 vs. Winner of S8" },
+          { "game_code": "S10", "matchup": "Winner of S4 vs. Winner of S5" },
+          { "game_code": "S11", "matchup": "Winner of S3 vs. Winner of S6" },
+          { "game_code": "S12", "matchup": "Winner of S2 vs. Winner of S7" }
+        ],
+        "Sweet 16": [
+          { "game_code": "S13", "matchup": "Winner of S9 vs. Winner of S10" },
+          { "game_code": "S14", "matchup": "Winner of S11 vs. Winner of S12" }
+        ],
+        "Elite Eight": [
+          { "game_code": "S15", "matchup": "Winner of S13 vs. Winner of S14" }
+        ]
+      }
+    },
+    "Midwest": {
+      "rounds": {
+        "Round of 64": [
+          { "game_code": "M1", "teams": ["Houston", "SIU Edwardsville"] },
+          { "game_code": "M2", "teams": ["Tennessee", "Wofford"] },
+          { "game_code": "M3", "teams": ["Kentucky", "High Point"] },
+          { "game_code": "M4", "teams": ["Purdue", "McNeese"] },
+          { "game_code": "M5", "teams": ["Clemson", "Drake"] },
+          { "game_code": "M6", "teams": ["Illinois", "Xavier"] },
+          { "game_code": "M7", "teams": ["Gonzaga", "Georgia"] },
+          { "game_code": "M8", "teams": ["UCLA", "Utah State"] }
+        ],
+        "Round of 32": [
+          { "game_code": "M9", "matchup": "Winner of M1 vs. Winner of M8" },
+          { "game_code": "M10", "matchup": "Winner of M4 vs. Winner of M5" },
+          { "game_code": "M11", "matchup": "Winner of M3 vs. Winner of M6" },
+          { "game_code": "M12", "matchup": "Winner of M2 vs. Winner of M7" }
+        ],
+        "Sweet 16": [
+          { "game_code": "M13", "matchup": "Winner of M9 vs. Winner of M10" },
+          { "game_code": "M14", "matchup": "Winner of M11 vs. Winner of M12" }
+        ],
+        "Elite Eight": [
+          { "game_code": "M15", "matchup": "Winner of M13 vs. Winner of M14" }
+        ]
+      }
+    }
+  },
+  "final_four": {
+    "games": [
+      {
+        "game_code": "FF1",
+        "matchup": "Winner of E15 vs. Winner of M15"
+      },
+      {
+        "game_code": "FF2",
+        "matchup": "Winner of S15 vs. Winner of W15"
+      }
+    ]
+  },
+  "championship": {
+    "game_code": "CH1",
+    "matchup": "Winner of FF1 vs. Winner of FF2"
+  }
+}
