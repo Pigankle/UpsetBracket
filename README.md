@@ -1,54 +1,80 @@
-# React + TypeScript + Vite
+# Upset Bracket
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A March Madness bracket picker that helps you track your picks and see how they compare to actual game results. Built with React, TypeScript, and Vite.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- Interactive bracket interface for making picks
+- Real-time comparison with actual game results
+- Visual feedback for correct/incorrect picks
+- Points tracking based on game results
+- Ability to save and load your bracket
+- Game code display toggle (S1, FF1, etc.)
+- Bracket name customization
 
-## Expanding the ESLint configuration
+## Live Demo
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+Visit the live demo at: [https://pigankle.github.io/UpsetBracket/](https://pigankle.github.io/UpsetBracket/)
 
-```js
-export default tseslint.config({
-  extends: [
-    // Remove ...tseslint.configs.recommended and replace with this
-    ...tseslint.configs.recommendedTypeChecked,
-    // Alternatively, use this for stricter rules
-    ...tseslint.configs.strictTypeChecked,
-    // Optionally, add this for stylistic rules
-    ...tseslint.configs.stylisticTypeChecked,
-  ],
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
+## Local Development
+
+1. Clone the repository:
+
+```bash
+git clone https://github.com/pigankle/UpsetBracket.git
+cd UpsetBracket
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+2. Install dependencies:
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default tseslint.config({
-  plugins: {
-    // Add the react-x and react-dom plugins
-    'react-x': reactX,
-    'react-dom': reactDom,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended typescript rules
-    ...reactX.configs['recommended-typescript'].rules,
-    ...reactDom.configs.recommended.rules,
-  },
-})
+```bash
+npm install
 ```
+
+3. Start the development server:
+
+```bash
+npm run dev
+```
+
+4. Open your browser and navigate to `http://localhost:5173`
+
+## Building for Production
+
+To build the project for production:
+
+```bash
+npm run build
+```
+
+The built files will be in the `dist` directory.
+
+## Deployment
+
+This project is configured for GitHub Pages deployment. The site is automatically deployed when changes are pushed to the main branch.
+
+To deploy manually:
+
+1. Build the project:
+
+```bash
+npm run build
+```
+
+2. Deploy to GitHub Pages:
+
+```bash
+npm run deploy
+```
+
+## Data Sources
+
+The bracket data is loaded from JSON files:
+
+- `march_madness_games.json`: Contains game results and points
+- `bracket_structure.json`: Defines the bracket structure
+- `ncaa_2025_bracket.json`: Contains the initial bracket data
+
+## License
+
+MIT License - feel free to use this project for your own purposes.
