@@ -255,6 +255,7 @@ function Team({
           variant="body2"
           sx={{
             color: "text.primary",
+            fontWeight: isWinner ? "bold" : "normal",
           }}
         >
           {team.seed} {team.name}
@@ -325,6 +326,7 @@ function Team({
           variant="body2"
           sx={{
             color: isIncorrect ? "error.main" : "text.primary",
+            fontWeight: isWinner ? "bold" : "normal",
           }}
         >
           {team.seed} {team.name}
