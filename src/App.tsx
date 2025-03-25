@@ -85,7 +85,8 @@ export default function App() {
   const calculateScore = (currentMatchups: Matchup[]) => {
     let score = 0;
     currentMatchups.forEach((matchup) => {
-      if (matchup && matchup.gameCode) {
+      // Only calculate points if the user has made a pick
+      if (matchup && matchup.gameCode && matchup.winner) {
         const gameData = (typedMarchMadnessGames as MarchMadnessGames)[
           matchup.gameCode
         ];
