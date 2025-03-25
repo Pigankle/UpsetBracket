@@ -361,6 +361,11 @@ export default function BracketDisplay({
     setMatchups(initialMatchups);
   }, [initialMatchups]);
 
+  useEffect(() => {
+    // Recalculate points when useTestData changes
+    onUpdateBracket([...matchups]);
+  }, [useTestData]);
+
   const typedMarchMadnessGames = useTestData
     ? (marchMadnessGamesTest as unknown as Record<string, MarchMadnessGame>)
     : (marchMadnessGames as unknown as Record<string, MarchMadnessGame>);
@@ -617,46 +622,61 @@ export default function BracketDisplay({
             variant="body2"
             sx={{ color: "success.main", textAlign: "center", flex: 1 }}
           >
-            FF2: {(() => {
+            FF2:{" "}
+            {(() => {
               if (matchups[61]?.winner) {
-                const winner = matchups[61].winner === "top" ? matchups[61].topTeam : matchups[61].bottomTeam;
+                const winner =
+                  matchups[61].winner === "top"
+                    ? matchups[61].topTeam
+                    : matchups[61].bottomTeam;
                 const gameResult = typedMarchMadnessGames["FF2"];
                 if (gameResult && gameResult["Winning Team"] === winner.name) {
                   return gameResult.points || 0;
                 }
               }
               return 0;
-            })()} points
+            })()}{" "}
+            points
           </Typography>
           <Typography
             variant="body2"
             sx={{ color: "success.main", textAlign: "center", flex: 1 }}
           >
-            CH1: {(() => {
+            CH1:{" "}
+            {(() => {
               if (matchups[62]?.winner) {
-                const winner = matchups[62].winner === "top" ? matchups[62].topTeam : matchups[62].bottomTeam;
+                const winner =
+                  matchups[62].winner === "top"
+                    ? matchups[62].topTeam
+                    : matchups[62].bottomTeam;
                 const gameResult = typedMarchMadnessGames["CH1"];
                 if (gameResult && gameResult["Winning Team"] === winner.name) {
                   return gameResult.points || 0;
                 }
               }
               return 0;
-            })()} points
+            })()}{" "}
+            points
           </Typography>
           <Typography
             variant="body2"
             sx={{ color: "success.main", textAlign: "center", flex: 1 }}
           >
-            FF1: {(() => {
+            FF1:{" "}
+            {(() => {
               if (matchups[60]?.winner) {
-                const winner = matchups[60].winner === "top" ? matchups[60].topTeam : matchups[60].bottomTeam;
+                const winner =
+                  matchups[60].winner === "top"
+                    ? matchups[60].topTeam
+                    : matchups[60].bottomTeam;
                 const gameResult = typedMarchMadnessGames["FF1"];
                 if (gameResult && gameResult["Winning Team"] === winner.name) {
                   return gameResult.points || 0;
                 }
               }
               return 0;
-            })()} points
+            })()}{" "}
+            points
           </Typography>
         </Box>
         <Typography
@@ -668,7 +688,105 @@ export default function BracketDisplay({
             fontWeight: "bold",
           }}
         >
-          Total Score: {totalScore}
+          Scores by Round:
+          {(() => {
+            const roundNames = [
+              "Round of 64",
+              "Round of 32",
+              "Sweet 16",
+              "Elite 8",
+              "Final Four",
+              "Championship",
+            ];
+            const roundScores = Array(6).fill(0);
+
+            // Calculate scores for first 4 rounds (regions)
+            matchups.forEach((matchup, index) => {
+              if (matchup.winner) {
+                const winner =
+                  matchup.winner === "top"
+                    ? matchup.topTeam
+                    : matchup.bottomTeam;
+                const gameResult = typedMarchMadnessGames[matchup.gameCode];
+                if (gameResult && gameResult["Winning Team"] === winner.name) {
+                  let round;
+                  // Round of 64: indices 0-7, 15-21, 30-37, 45-51
+                  const round64Indices = [
+                    ...Array.from({ length: 8 }, (_, i) => i), // 0-7
+                    ...Array.from({ length: 8 }, (_, i) => i + 15), // 15-22
+                    ...Array.from({ length: 8 }, (_, i) => i + 30), // 30-37
+                    ...Array.from({ length: 8 }, (_, i) => i + 45), // 45-52
+                  ];
+                  // Round of 32: indices 8-11, 23-26, 38-41, 53-56
+                  const round32Indices = [
+                    ...Array.from({ length: 4 }, (_, i) => i + 8), // 8-11
+                    ...Array.from({ length: 4 }, (_, i) => i + 23), // 23-26
+                    ...Array.from({ length: 4 }, (_, i) => i + 38), // 38-41
+                    ...Array.from({ length: 4 }, (_, i) => i + 53), // 53-56
+                  ];
+                  // Sweet 16 and Elite 8 indices
+                  const sweet16Indices = [12, 13, 27, 28, 42, 43, 57, 58];
+                  const elite8Indices = [14, 29, 44, 59];
+
+                  if (round64Indices.includes(index)) round = 0;
+                  else if (round32Indices.includes(index)) round = 1;
+                  else if (sweet16Indices.includes(index)) round = 2;
+                  else if (elite8Indices.includes(index)) round = 3;
+                  if (round !== undefined) {
+                    roundScores[round] += gameResult.points || 0;
+                  }
+                }
+              }
+            });
+
+            // Final Four (round 4)
+            matchups.slice(60, 62).forEach((matchup) => {
+              if (matchup.winner) {
+                const winner =
+                  matchup.winner === "top"
+                    ? matchup.topTeam
+                    : matchup.bottomTeam;
+                const gameResult = typedMarchMadnessGames[matchup.gameCode];
+                if (gameResult && gameResult["Winning Team"] === winner.name) {
+                  roundScores[4] += gameResult.points || 0;
+                }
+              }
+            });
+
+            // Championship (round 5)
+            if (matchups[62]?.winner) {
+              const winner =
+                matchups[62].winner === "top"
+                  ? matchups[62].topTeam
+                  : matchups[62].bottomTeam;
+              const gameResult = typedMarchMadnessGames[matchups[62].gameCode];
+              if (gameResult && gameResult["Winning Team"] === winner.name) {
+                roundScores[5] += gameResult.points || 0;
+              }
+            }
+
+            return (
+              <Box
+                sx={{ display: "flex", flexDirection: "column", gap: 1, mt: 1 }}
+              >
+                {roundScores.map((score, index) => (
+                  <Typography
+                    key={index}
+                    variant="body2"
+                    sx={{ color: "text.secondary" }}
+                  >
+                    {roundNames[index]}: {score} points
+                  </Typography>
+                ))}
+                <Typography
+                  variant="h6"
+                  sx={{ color: "success.main", fontWeight: "bold", mt: 1 }}
+                >
+                  Total Score: {totalScore}
+                </Typography>
+              </Box>
+            );
+          })()}
         </Typography>
       </Box>
     );
