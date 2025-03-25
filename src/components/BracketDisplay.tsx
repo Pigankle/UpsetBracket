@@ -581,18 +581,6 @@ export default function BracketDisplay({
               {renderMatchup(matchups[61], 61, false, 3)}{" "}
               {/* FF2: South vs West */}
             </Round>
-            <Typography variant="body2" sx={{ mt: 1, color: "success.main" }}>
-              {matchups[61]?.winner && matchups[61].winner === "top"
-                ? matchups[61].topTeam.name ===
-                  marchMadnessGames["FF2"]?.["Winning Team"]
-                  ? marchMadnessGames["FF2"]?.points || 0
-                  : 0
-                : matchups[61].bottomTeam.name ===
-                  marchMadnessGames["FF2"]?.["Winning Team"]
-                ? marchMadnessGames["FF2"]?.points || 0
-                : 0}{" "}
-              points
-            </Typography>
           </Box>
           <Box
             sx={{
@@ -603,18 +591,6 @@ export default function BracketDisplay({
           >
             <Round>{renderMatchup(matchups[62], 62, false, 4)}</Round>{" "}
             {/* Championship */}
-            <Typography variant="body2" sx={{ mt: 1, color: "success.main" }}>
-              {matchups[62]?.winner && matchups[62].winner === "top"
-                ? matchups[62].topTeam.name ===
-                  marchMadnessGames["CH1"]?.["Winning Team"]
-                  ? marchMadnessGames["CH1"]?.points || 0
-                  : 0
-                : matchups[62].bottomTeam.name ===
-                  marchMadnessGames["CH1"]?.["Winning Team"]
-                ? marchMadnessGames["CH1"]?.points || 0
-                : 0}{" "}
-              points
-            </Typography>
           </Box>
           <Box
             sx={{
@@ -627,24 +603,66 @@ export default function BracketDisplay({
               {renderMatchup(matchups[60], 60, false, 3)}{" "}
               {/* FF1: East vs Midwest */}
             </Round>
-            <Typography variant="body2" sx={{ mt: 1, color: "success.main" }}>
-              {matchups[60]?.winner && matchups[60].winner === "top"
-                ? matchups[60].topTeam.name ===
-                  marchMadnessGames["FF1"]?.["Winning Team"]
-                  ? marchMadnessGames["FF1"]?.points || 0
-                  : 0
-                : matchups[60].bottomTeam.name ===
-                  marchMadnessGames["FF1"]?.["Winning Team"]
-                ? marchMadnessGames["FF1"]?.points || 0
-                : 0}{" "}
-              points
-            </Typography>
           </Box>
+        </Box>
+        <Box
+          sx={{
+            mt: 4,
+            display: "flex",
+            justifyContent: "space-between",
+            gap: 4,
+          }}
+        >
+          <Typography
+            variant="body2"
+            sx={{ color: "success.main", textAlign: "center", flex: 1 }}
+          >
+            FF2: {(() => {
+              if (matchups[61]?.winner) {
+                const winner = matchups[61].winner === "top" ? matchups[61].topTeam : matchups[61].bottomTeam;
+                const gameResult = typedMarchMadnessGames["FF2"];
+                if (gameResult && gameResult["Winning Team"] === winner.name) {
+                  return gameResult.points || 0;
+                }
+              }
+              return 0;
+            })()} points
+          </Typography>
+          <Typography
+            variant="body2"
+            sx={{ color: "success.main", textAlign: "center", flex: 1 }}
+          >
+            CH1: {(() => {
+              if (matchups[62]?.winner) {
+                const winner = matchups[62].winner === "top" ? matchups[62].topTeam : matchups[62].bottomTeam;
+                const gameResult = typedMarchMadnessGames["CH1"];
+                if (gameResult && gameResult["Winning Team"] === winner.name) {
+                  return gameResult.points || 0;
+                }
+              }
+              return 0;
+            })()} points
+          </Typography>
+          <Typography
+            variant="body2"
+            sx={{ color: "success.main", textAlign: "center", flex: 1 }}
+          >
+            FF1: {(() => {
+              if (matchups[60]?.winner) {
+                const winner = matchups[60].winner === "top" ? matchups[60].topTeam : matchups[60].bottomTeam;
+                const gameResult = typedMarchMadnessGames["FF1"];
+                if (gameResult && gameResult["Winning Team"] === winner.name) {
+                  return gameResult.points || 0;
+                }
+              }
+              return 0;
+            })()} points
+          </Typography>
         </Box>
         <Typography
           variant="h6"
           sx={{
-            mt: 4,
+            mt: 2,
             textAlign: "center",
             color: "success.main",
             fontWeight: "bold",
