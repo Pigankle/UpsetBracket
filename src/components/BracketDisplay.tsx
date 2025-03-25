@@ -150,11 +150,12 @@ const GameCodeLabel = styled(Typography, {
 
 const MatchupConnector = styled(Box)<{ gameCode?: string }>(({ gameCode }) => ({
   position: "absolute",
-  ...(gameCode?.startsWith("E") || gameCode?.startsWith("M")
-    ? { left: "-16px" }
-    : { right: "-16px" }),
-  width: "16px",
+  ...(gameCode?.startsWith("E") || gameCode?.startsWith("M") || gameCode === "FF1"
+    ? { left: "-24px" }
+    : { right: "-24px" }),
+  width: "24px",
   borderTop: "2px solid #ccc",
+  zIndex: 0
 }));
 
 const Round = styled(Box)({
@@ -512,13 +513,25 @@ export default function BracketDisplay({
         {points !== undefined && (
           <PointsLabel
             sx={{
-              color: points === 0 ? "error.main" : "success.main",
               position: "absolute",
-              ...(matchup.gameCode.startsWith("E") || matchup.gameCode.startsWith("M")
-                ? { left: "-40px" }
-                : { right: "-40px" }),
+              ...(matchup.gameCode.startsWith("F") || matchup.gameCode.startsWith("C")
+                ? {
+                    color: "white",
+                    zIndex: -1
+                  }
+                : {
+                    color: points === 0 ? "error.main" : "success.main",
+                    ...(matchup.gameCode.startsWith("E") || matchup.gameCode.startsWith("M")
+                      ? { left: "-30px" }
+                      : { right: "-35px" }),
+                    backgroundColor: "white",
+                    padding: "0 2px",
+                    borderRadius: "2px",
+                    zIndex: 1,
+                    width: "fit-content",
+                  }),
               top: "50%",
-              transform: "translateY(-50%)"
+              transform: "translateY(-50%)",
             }}
           >
             +{points}
