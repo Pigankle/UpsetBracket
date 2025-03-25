@@ -103,7 +103,6 @@ const typedBracketStructure = bracketStructure as BracketStructure;
 
 interface TeamProps {
   team: Team;
-  isWinner?: boolean;
   onClick?: () => void;
   isStrikethrough?: boolean;
   matchup?: Matchup;
@@ -196,7 +195,6 @@ const regionCodeToName: Record<string, Region> = {
 
 function Team({
   team,
-  isWinner,
   onClick,
   isStrikethrough,
   gameCode,
@@ -230,6 +228,7 @@ function Team({
           variant="body2"
           sx={{
             color: "text.primary",
+            fontWeight: matchup?.winner === position ? "bold" : "normal",
           }}
         >
           {team.seed} {team.name}
@@ -252,7 +251,7 @@ function Team({
           variant="body2"
           sx={{
             color: "text.primary",
-            fontWeight: isWinner ? "bold" : "normal",
+            fontWeight: matchup?.winner === position ? "bold" : "normal",
           }}
         >
           {team.seed} {team.name}
@@ -325,7 +324,7 @@ function Team({
           variant="body2"
           sx={{
             color: isIncorrect ? "error.main" : "text.primary",
-            fontWeight: isWinner ? "bold" : "normal",
+            fontWeight: matchup?.winner === position ? "bold" : "normal",
           }}
         >
           {team.seed} {team.name}
@@ -475,7 +474,6 @@ export default function BracketDisplay({
         </GameCodeLabel>
         <Team
           team={matchup.topTeam}
-          isWinner={topTeamWon}
           isStrikethrough={bottomTeamWon}
           onClick={() => handleTeamClick(matchup.gameCode, "top")}
           gameCode={matchup.gameCode}
@@ -486,7 +484,6 @@ export default function BracketDisplay({
         />
         <Team
           team={matchup.bottomTeam}
-          isWinner={bottomTeamWon}
           isStrikethrough={topTeamWon}
           onClick={() => handleTeamClick(matchup.gameCode, "bottom")}
           gameCode={matchup.gameCode}
