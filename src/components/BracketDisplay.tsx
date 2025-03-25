@@ -115,9 +115,9 @@ interface TeamProps {
 const TeamSlot = styled(Box)(({ theme }) => ({
   display: "flex",
   alignItems: "center",
-  padding: "4px 8px",
-  width: "200px",
-  height: "32px",
+  padding: "2px 6px",
+  width: "180px",
+  height: "28px",
   border: `1px solid ${theme.palette.divider}`,
   cursor: "pointer",
   "&:hover": {
@@ -150,12 +150,14 @@ const GameCodeLabel = styled(Typography, {
 
 const MatchupConnector = styled(Box)<{ gameCode?: string }>(({ gameCode }) => ({
   position: "absolute",
-  ...(gameCode?.startsWith("E") || gameCode?.startsWith("M") || gameCode === "FF1"
+  ...(gameCode?.startsWith("E") ||
+  gameCode?.startsWith("M") ||
+  gameCode === "FF1"
     ? { left: "-24px" }
-    : { right: "-24px" }),
+    : { right: "-0px" }),
   width: "24px",
   borderTop: "2px solid #ccc",
-  zIndex: 0
+  zIndex: 0,
 }));
 
 const Round = styled(Box)({
@@ -514,16 +516,18 @@ export default function BracketDisplay({
           <PointsLabel
             sx={{
               position: "absolute",
-              ...(matchup.gameCode.startsWith("F") || matchup.gameCode.startsWith("C")
+              ...(matchup.gameCode.startsWith("F") ||
+              matchup.gameCode.startsWith("C")
                 ? {
                     color: "white",
-                    zIndex: -1
+                    zIndex: -1,
                   }
                 : {
                     color: points === 0 ? "error.main" : "success.main",
-                    ...(matchup.gameCode.startsWith("E") || matchup.gameCode.startsWith("M")
+                    ...(matchup.gameCode.startsWith("E") ||
+                    matchup.gameCode.startsWith("M")
                       ? { left: "-30px" }
-                      : { right: "-35px" }),
+                      : { right: "-10px" }),
                     backgroundColor: "white",
                     padding: "0 2px",
                     borderRadius: "2px",
