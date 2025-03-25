@@ -819,6 +819,19 @@ export default function BracketDisplay({
                 >
                   Total Score: {totalScore}
                 </Typography>
+                {useTestData && (
+                  <Typography
+                    variant="h6"
+                    sx={{
+                      color: "error.main",
+                      fontWeight: "bold",
+                      textAlign: "center",
+                      mt: 1
+                    }}
+                  >
+                    SCORING BASED ON TEST DATA
+                  </Typography>
+                )}
               </Box>
             );
           })()}
@@ -896,18 +909,7 @@ export default function BracketDisplay({
           }
           label="Use Test Data"
         />
-        {useTestData && (
-          <Typography
-            variant="h6"
-            sx={{
-              color: "error.main",
-              fontWeight: "bold",
-              textAlign: "center",
-            }}
-          >
-            SCORING BASED ON TEST DATA (Disable below)
-          </Typography>
-        )}
+
       </Box>
     </Box>
   );
