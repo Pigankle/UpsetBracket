@@ -275,7 +275,7 @@ function Team({
   const correctSeed = position === "top" ? actualTopSeed : actualBottomSeed;
 
   // Debug log to check values
-  console.log(`Game ${gameCode}, Round ${round}:`, {
+  /*  console.log(`Game ${gameCode}, Round ${round}:`, {
     team: team.name,
     position,
     actualTopTeam,
@@ -285,7 +285,7 @@ function Team({
     correctTeam,
     correctSeed,
     gameResult,
-  });
+  }); */
 
   return (
     <Box sx={{ position: "relative" }}>
@@ -380,32 +380,54 @@ export default function BracketDisplay({
     // Update current matchup
     currentMatchup.winner = position;
 
-    // Find all subsequent matchups that need to be cleared
-    let currentIndex = matchupIndex;
-    while (newMatchups[currentIndex].nextMatchupIndex !== undefined) {
-      const nextIndex = newMatchups[currentIndex].nextMatchupIndex;
-      if (nextIndex === undefined) break;
+    // Track the path of teams that need to be cleared
+    const clearPath = (matchupIndex: number, position: "top" | "bottom") => {
+      const matchup = newMatchups[matchupIndex];
 
-      const nextMatchup = newMatchups[nextIndex];
+      // If this matchup has no next matchup, we're done
+      if (matchup.nextMatchupIndex === undefined) {
+        return;
+      }
 
-      // Clear the winner
-      nextMatchup.winner = undefined;
+      const nextMatchup = newMatchups[matchup.nextMatchupIndex];
+      const nextPosition = matchup.nextPosition;
 
-      // If this is the first next matchup, update the team
-      if (currentIndex === matchupIndex) {
-        if (newMatchups[currentIndex].nextPosition === "top") {
+      // Update the team in the next matchup
+      if (matchup === currentMatchup) {
+        // If this is the original clicked matchup, propagate the selected team
+        if (nextPosition === "top") {
           nextMatchup.topTeam = selectedTeam;
         } else {
           nextMatchup.bottomTeam = selectedTeam;
         }
       } else {
-        // For all subsequent matchups, set both teams to TBD
-        nextMatchup.topTeam = { name: "TBD", seed: "0" };
-        nextMatchup.bottomTeam = { name: "TBD", seed: "0" };
+        // For subsequent matchups, clear the appropriate team
+        if (nextPosition === "top") {
+          // If this team was picked as winner, clear it and continue clearing
+          if (nextMatchup.winner === "top") {
+            nextMatchup.winner = undefined;
+            nextMatchup.topTeam = { name: "TBD", seed: "0" };
+            clearPath(matchup.nextMatchupIndex, "top");
+          } else {
+            // Just clear the team but preserve the winner if it was the other team
+            nextMatchup.topTeam = { name: "TBD", seed: "0" };
+          }
+        } else {
+          // If this team was picked as winner, clear it and continue clearing
+          if (nextMatchup.winner === "bottom") {
+            nextMatchup.winner = undefined;
+            nextMatchup.bottomTeam = { name: "TBD", seed: "0" };
+            clearPath(matchup.nextMatchupIndex, "bottom");
+          } else {
+            // Just clear the team but preserve the winner if it was the other team
+            nextMatchup.bottomTeam = { name: "TBD", seed: "0" };
+          }
+        }
       }
+    };
 
-      currentIndex = nextIndex;
-    }
+    // Start clearing the path from the current matchup
+    clearPath(matchupIndex, position);
 
     setMatchups(newMatchups);
     onUpdateBracket(newMatchups);
@@ -441,7 +463,7 @@ export default function BracketDisplay({
     }
 
     // Debug log to check round numbers
-    console.log(`Rendering matchup ${matchup.gameCode} in round ${round}`);
+    //  console.log(`Rendering matchup ${matchup.gameCode} in round ${round}`);
 
     return (
       <MatchupWrapper key={matchup.gameCode}>
@@ -506,11 +528,11 @@ export default function BracketDisplay({
             const roundMatchups = getRegionMatchups(currentIndex, count);
             currentIndex += count;
             // Debug log to check round numbers
-            console.log(`Region ${regionName}, Round ${roundIndex}:`, {
+            /*   console.log(`Region ${regionName}, Round ${roundIndex}:`, {
               count,
               currentIndex,
               matchups: roundMatchups.map((m) => m.gameCode),
-            });
+            }); */
             return (
               <Round key={roundIndex}>
                 {roundMatchups.map((matchup) =>
