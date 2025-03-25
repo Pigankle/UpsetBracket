@@ -148,12 +148,14 @@ const GameCodeLabel = styled(Typography, {
   fontWeight: "bold",
 }));
 
-const MatchupConnector = styled(Box)({
+const MatchupConnector = styled(Box)<{ gameCode?: string }>(({ gameCode }) => ({
   position: "absolute",
-  right: "-16px",
+  ...(gameCode?.startsWith("E") || gameCode?.startsWith("M")
+    ? { left: "-16px" }
+    : { right: "-16px" }),
   width: "16px",
   borderTop: "2px solid #ccc",
-});
+}));
 
 const Round = styled(Box)({
   display: "flex",
@@ -499,6 +501,7 @@ export default function BracketDisplay({
         />
         {matchup.nextMatchupIndex !== undefined && (
           <MatchupConnector
+            gameCode={matchup.gameCode}
             sx={{
               top: matchup.nextPosition === "top" ? "50%" : undefined,
               bottom: matchup.nextPosition === "bottom" ? "50%" : undefined,
@@ -510,10 +513,12 @@ export default function BracketDisplay({
           <PointsLabel
             sx={{
               color: points === 0 ? "error.main" : "success.main",
-              position: matchup.gameCode.startsWith("E") || matchup.gameCode.startsWith("M") ? "absolute" : "static",
-              left: matchup.gameCode.startsWith("E") || matchup.gameCode.startsWith("M") ? "-40px" : undefined,
+              position: "absolute",
+              ...(matchup.gameCode.startsWith("E") || matchup.gameCode.startsWith("M")
+                ? { left: "-40px" }
+                : { right: "-40px" }),
               top: "50%",
-              transform: matchup.gameCode.startsWith("E") || matchup.gameCode.startsWith("M") ? "translateY(-50%)" : undefined
+              transform: "translateY(-50%)"
             }}
           >
             +{points}
