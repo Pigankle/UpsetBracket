@@ -11,6 +11,7 @@ import { styled } from "@mui/material/styles";
 import type { Team, Matchup } from "../utils/bracketTransform";
 import { gameCodeToIndex } from "../utils/bracketTransform";
 import marchMadnessGames from "../data/march_madness_games.json";
+import marchMadnessGamesTest from "../data/march_madness_games_TEST_DATA.json";
 import bracketStructure from "../data/ncaa_2025_bracket.json";
 
 type Region = "East" | "West" | "South" | "Midwest";
@@ -73,11 +74,6 @@ interface MarchMadnessGame {
   points: number;
 }
 
-const typedMarchMadnessGames = marchMadnessGames as unknown as Record<
-  string,
-  MarchMadnessGame
->;
-
 interface BracketTeam {
   seed: number;
   name: string;
@@ -111,6 +107,10 @@ interface TeamProps {
   onClick?: () => void;
   isStrikethrough?: boolean;
   matchup?: Matchup;
+  gameCode: string;
+  round: number;
+  position: "top" | "bottom";
+  marchMadnessGames: Record<string, MarchMadnessGame>;
 }
 
 const TeamSlot = styled(Box)(({ theme }) => ({
@@ -203,12 +203,9 @@ function Team({
   round,
   matchup,
   position,
-}: TeamProps & {
-  gameCode: string;
-  round: number;
-  position: "top" | "bottom";
-}) {
-  const gameResult = typedMarchMadnessGames[gameCode];
+  marchMadnessGames,
+}: TeamProps) {
+  const gameResult = marchMadnessGames[gameCode];
   if (!gameResult) {
     console.log(`No game result found for ${gameCode}`);
     return null;
@@ -342,6 +339,8 @@ interface BracketDisplayProps {
   bracketName: string;
   onUpdateBracketName: (name: string) => void;
   totalScore: number;
+  useTestData: boolean;
+  onUpdateUseTestData: (useTestData: boolean) => void;
 }
 
 export default function BracketDisplay({
@@ -350,6 +349,8 @@ export default function BracketDisplay({
   bracketName,
   onUpdateBracketName,
   totalScore,
+  useTestData,
+  onUpdateUseTestData,
 }: BracketDisplayProps) {
   const [matchups, setMatchups] = useState<Matchup[]>(initialMatchups);
   const [showGameCode, setShowGameCode] = useState(false);
@@ -357,6 +358,10 @@ export default function BracketDisplay({
   useEffect(() => {
     setMatchups(initialMatchups);
   }, [initialMatchups]);
+
+  const typedMarchMadnessGames = useTestData
+    ? (marchMadnessGamesTest as unknown as Record<string, MarchMadnessGame>)
+    : (marchMadnessGames as unknown as Record<string, MarchMadnessGame>);
 
   const handleTeamClick = (gameCode: string, position: "top" | "bottom") => {
     const matchupIndex = gameCodeToIndex[gameCode];
@@ -452,6 +457,7 @@ export default function BracketDisplay({
           round={round}
           matchup={matchup}
           position="top"
+          marchMadnessGames={typedMarchMadnessGames}
         />
         <Team
           team={matchup.bottomTeam}
@@ -462,6 +468,7 @@ export default function BracketDisplay({
           round={round}
           matchup={matchup}
           position="bottom"
+          marchMadnessGames={typedMarchMadnessGames}
         />
         {matchup.nextMatchupIndex !== undefined && (
           <MatchupConnector
@@ -669,7 +676,15 @@ export default function BracketDisplay({
           {renderRegion("Midwest", 45, true)}
         </Box>
       </Box>
-      <Box sx={{ display: "flex", justifyContent: "center", mt: 2 }}>
+      <Box
+        sx={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: 2,
+          mt: 2,
+        }}
+      >
         <FormControlLabel
           control={
             <Checkbox
@@ -679,6 +694,27 @@ export default function BracketDisplay({
           }
           label="Show Game Code"
         />
+        <FormControlLabel
+          control={
+            <Checkbox
+              checked={useTestData}
+              onChange={(e) => onUpdateUseTestData(e.target.checked)}
+            />
+          }
+          label="Use Test Data"
+        />
+        {useTestData && (
+          <Typography
+            variant="h6"
+            sx={{
+              color: "error.main",
+              fontWeight: "bold",
+              textAlign: "center",
+            }}
+          >
+            SCORING BASED ON TEST DATA (Disable below)
+          </Typography>
+        )}
       </Box>
     </Box>
   );

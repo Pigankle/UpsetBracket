@@ -4,6 +4,7 @@ import BracketDisplay from "./components/BracketDisplay";
 import { createInitialBracket, Matchup } from "./utils/bracketTransform";
 import tournamentData from "./data/ncaa_2025_bracket.json";
 import marchMadnessGames from "./data/march_madness_games.json";
+import marchMadnessGamesTest from "./data/march_madness_games_TEST_DATA.json";
 
 interface TournamentTeam {
   seed: string | number;
@@ -63,13 +64,18 @@ interface MarchMadnessGames {
   [key: string]: MarchMadnessGame;
 }
 
-function App() {
-  const [matchups, setMatchups] = useState<Matchup[]>(
-    createInitialBracket(tournamentData as TournamentData)
+export default function App() {
+  const [bracketName, setBracketName] = useState("My Bracket");
+  const [useTestData, setUseTestData] = useState(true);
+  const [matchups, setMatchups] = useState<Matchup[]>(() =>
+    createInitialBracket(tournamentData)
   );
   const [totalScore, setTotalScore] = useState(0);
-  const [bracketName, setBracketName] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const typedMarchMadnessGames = useTestData
+    ? (marchMadnessGamesTest as unknown as Record<string, MarchMadnessGame>)
+    : (marchMadnessGames as unknown as Record<string, MarchMadnessGame>);
 
   const handleUpdateBracket = (newMatchups: Matchup[]) => {
     setMatchups(newMatchups);
@@ -80,7 +86,7 @@ function App() {
     let score = 0;
     currentMatchups.forEach((matchup) => {
       if (matchup && matchup.gameCode) {
-        const gameData = (marchMadnessGames as MarchMadnessGames)[
+        const gameData = (typedMarchMadnessGames as MarchMadnessGames)[
           matchup.gameCode
         ];
         if (gameData) {
@@ -173,6 +179,8 @@ function App() {
           bracketName={bracketName}
           onUpdateBracketName={setBracketName}
           totalScore={totalScore}
+          useTestData={useTestData}
+          onUpdateUseTestData={setUseTestData}
         />
       </Box>
       <Box
@@ -213,5 +221,3 @@ function App() {
     </Container>
   );
 }
-
-export default App;
