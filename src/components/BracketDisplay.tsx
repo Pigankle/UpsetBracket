@@ -256,6 +256,7 @@ function Team({
           }}
         >
           {team.seed} {team.name}
+          {gameResult["Winning Team"] === team.name && " ✓"}
         </Typography>
       </TeamSlot>
     );
@@ -305,6 +306,7 @@ function Team({
           }}
         >
           {correctSeed} {correctTeam}
+          {gameResult["Winning Team"] === correctTeam && " ✓"}
         </Typography>
       )}
       <TeamSlot
@@ -327,6 +329,7 @@ function Team({
           }}
         >
           {team.seed} {team.name}
+          {gameResult["Winning Team"] === team.name && " ✓"}
         </Typography>
       </TeamSlot>
     </Box>
