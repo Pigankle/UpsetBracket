@@ -505,8 +505,21 @@ export default function BracketDisplay({
             }}
           />
         )}
-        {points !== undefined && <PointsLabel>+{points}</PointsLabel>}
-      </MatchupWrapper>
+
+        {points !== undefined && (
+          <PointsLabel
+            sx={{
+              color: points === 0 ? "error.main" : "success.main",
+              position: matchup.gameCode.startsWith("E") || matchup.gameCode.startsWith("M") ? "absolute" : "static",
+              left: matchup.gameCode.startsWith("E") || matchup.gameCode.startsWith("M") ? "-40px" : undefined,
+              top: "50%",
+              transform: matchup.gameCode.startsWith("E") || matchup.gameCode.startsWith("M") ? "translateY(-50%)" : undefined
+            }}
+          >
+            +{points}
+          </PointsLabel>
+        )}
+      </MatchupWrapper> //This is where the per-game points are displayed
     );
   };
 
