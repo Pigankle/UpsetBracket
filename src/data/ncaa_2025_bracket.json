@@ -544,12 +544,12 @@
   "final_four": {
     "games": [
       {
-        "game_code": "FF1",
+        "game_code": "FF2",
         "top": "Winner of E15",
         "bottom": "Winner of M15"
       },
       {
-        "game_code": "FF2",
+        "game_code": "FF1",
         "top": "Winner of S15",
         "bottom": "Winner of W15"
       }
@@ -557,7 +557,7 @@
   },
   "championship": {
     "game_code": "CH1",
-    "top": "Winner of FF1",
-    "bottom": "Winner of FF2"
+    "top": "Winner of FF2",
+    "bottom": "Winner of FF1"
   }
 }

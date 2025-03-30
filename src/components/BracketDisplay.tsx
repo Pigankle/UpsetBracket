@@ -152,7 +152,7 @@ const MatchupConnector = styled(Box)<{ gameCode?: string }>(({ gameCode }) => ({
   position: "absolute",
   ...(gameCode?.startsWith("E") ||
   gameCode?.startsWith("M") ||
-  gameCode === "FF1"
+  gameCode === "FF2"
     ? { left: "-24px" }
     : { right: "-0px" }),
   width: "24px",
@@ -619,7 +619,7 @@ export default function BracketDisplay({
           >
             <Round>
               {renderMatchup(matchups[61], 61, false, 3)}{" "}
-              {/* FF2: South vs West */}
+              {/* FF1: South vs West */}
             </Round>
           </Box>
           <Box
@@ -641,7 +641,7 @@ export default function BracketDisplay({
           >
             <Round>
               {renderMatchup(matchups[60], 60, false, 3)}{" "}
-              {/* FF1: East vs Midwest */}
+              {/* FF2: East vs Midwest */}
             </Round>
           </Box>
         </Box>
@@ -657,14 +657,14 @@ export default function BracketDisplay({
             variant="body2"
             sx={{ color: "success.main", textAlign: "center", flex: 1 }}
           >
-            FF2:{" "}
+            FF1:{" "}
             {(() => {
               if (matchups[61]?.winner) {
                 const winner =
                   matchups[61].winner === "top"
                     ? matchups[61].topTeam
                     : matchups[61].bottomTeam;
-                const gameResult = typedMarchMadnessGames["FF2"];
+                const gameResult = typedMarchMadnessGames["FF1"];
                 if (gameResult && gameResult["Winning Team"] === winner.name) {
                   return gameResult.points || 0;
                 }
@@ -697,14 +697,14 @@ export default function BracketDisplay({
             variant="body2"
             sx={{ color: "success.main", textAlign: "center", flex: 1 }}
           >
-            FF1:{" "}
+            FF2:{" "}
             {(() => {
               if (matchups[60]?.winner) {
                 const winner =
                   matchups[60].winner === "top"
                     ? matchups[60].topTeam
                     : matchups[60].bottomTeam;
-                const gameResult = typedMarchMadnessGames["FF1"];
+                const gameResult = typedMarchMadnessGames["FF2"];
                 if (gameResult && gameResult["Winning Team"] === winner.name) {
                   return gameResult.points || 0;
                 }
@@ -826,7 +826,7 @@ export default function BracketDisplay({
                       color: "error.main",
                       fontWeight: "bold",
                       textAlign: "center",
-                      mt: 1
+                      mt: 1,
                     }}
                   >
                     SCORING BASED ON TEST DATA
@@ -909,7 +909,6 @@ export default function BracketDisplay({
           }
           label="Use Test Data"
         />
-
       </Box>
     </Box>
   );

@@ -114,8 +114,8 @@ const gameFlowMap: {
   M15: { nextGame: "FF2", position: "bottom" },
 
   // Final Four
-  FF1: { nextGame: "CH1", position: "top" },
   FF2: { nextGame: "CH1", position: "bottom" },
+  FF1: { nextGame: "CH1", position: "top" },
 };
 
 // Map game codes to their indices in the matchups array
@@ -189,7 +189,7 @@ export const gameCodeToIndex: { [key: string]: number } = {
   M15: 59,
 
   // Final Four and Championship (60-62)
-  FF1: 60,
+  FF2: 60,
   FF2: 61,
   CH1: 62,
 };

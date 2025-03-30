@@ -60,7 +60,7 @@ def calculate_points(winning_seed, losing_seed, round_value):
         32: 3,
         16: 5,
         8: 8,
-        4: 13,
+        4: 15,
         2: 21
     }
     base = round_to_base.get(round_value, 0)
