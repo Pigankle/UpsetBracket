@@ -16,6 +16,13 @@ interface BracketRow {
 interface ResultRow {
   game_code: string;
   winning_team: string | null;
+  losing_team: string | null;
+  top_team: string | null;
+  bottom_team: string | null;
+  top_team_seed: number | null;
+  bottom_team_seed: number | null;
+  winning_team_seed: number | null;
+  losing_team_seed: number | null;
   points: number;
 }
 
@@ -43,14 +50,20 @@ function calcCeiling(picks: Record<string, string>, results: ResultRow[]): numbe
   for (const [gameCode, pickedWinner] of Object.entries(picks)) {
     const result = resultMap[gameCode];
     if (!result) continue;
+
     if (result.winning_team === null) {
-      // Game not yet played — pick still alive, add potential points
-      ceiling += result.points;
+      // Game not yet played — pick still alive, calculate potential score
+      // We know the seeds of both teams
+      const pickedSeed = result.top_team === pickedWinner ? result.top_team_seed : result.bottom_team_seed;
+      const opponentSeed = result.top_team === pickedWinner ? result.bottom_team_seed : result.top_team_seed;
+      const multiplier = Math.max(1, (pickedSeed ?? 0) - (opponentSeed ?? 0));
+      ceiling += result.points * multiplier;
     } else if (result.winning_team === pickedWinner) {
-      // Already won — points already in total_score, still counts toward ceiling
-      ceiling += result.points;
+      // Already won — use actual scored points
+      const multiplier = Math.max(1, (result.winning_team_seed ?? 0) - (result.losing_team_seed ?? 0));
+      ceiling += result.points * multiplier;
     }
-    // If wrong pick: contributes 0
+    // Wrong pick: contributes 0
   }
   return ceiling;
 }
@@ -71,7 +84,7 @@ export default function Leaderboard({ currentBracketId, onViewBracket }: Leaderb
           .order('tiebreaker', { ascending: true, nullsFirst: false }),
         supabase
           .from('results')
-          .select('game_code, winning_team, points'),
+          .select('game_code, winning_team, losing_team, top_team, bottom_team, top_team_seed, bottom_team_seed, winning_team_seed, losing_team_seed, points'),
       ]);
       setBrackets((bracketData ?? []) as BracketRow[]);
       setResults((resultData ?? []) as ResultRow[]);
@@ -102,7 +115,9 @@ export default function Leaderboard({ currentBracketId, onViewBracket }: Leaderb
         </div>
       )}
 
-      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+      <div style={{ fontSize: 11, color: C.seed, textAlign: 'right', marginBottom: 8, fontStyle: 'italic' }}>
+        Note: Ceiling is approximate — not all possible outcomes are checked.
+      </div>
         <thead>
           <tr style={{ background: C.header, color: C.headerText }}>
             <th style={{ padding: '8px 10px', textAlign: 'left', width: 36 }}>#</th>
