@@ -4,7 +4,8 @@ import { isLocked } from '../lib/deadline';
 
 interface BracketRow {
   id: string;
-  name: string;
+  person_name: string;
+  bracket_name: string;
   total_score: number;
   tiebreaker: number | null;
   created_at: string;
@@ -40,7 +41,7 @@ export default function Leaderboard({ currentBracketId, onViewBracket }: Leaderb
     async function load() {
       const { data, error } = await supabase
         .from('brackets')
-        .select('id, name, total_score, tiebreaker, created_at, updated_at')
+        .select('id, person_name, bracket_name, total_score, tiebreaker, created_at, updated_at')
         .order('total_score', { ascending: false })
         .order('tiebreaker', { ascending: true, nullsFirst: false });
 
@@ -116,7 +117,7 @@ export default function Leaderboard({ currentBracketId, onViewBracket }: Leaderb
                   {i < 3 ? MEDAL[i] : i + 1}
                 </td>
                 <td style={{ padding: '8px 12px' }}>
-                  {visible ? b.name : '—'}
+                  {visible ? `${b.person_name} — ${b.bracket_name}` : '—'}
                   {isOwn && <span style={{ fontSize: 10, color: C.seed, marginLeft: 6 }}>(you)</span>}
                 </td>
                 <td style={{ padding: '8px 12px', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
