@@ -91,10 +91,14 @@ function TeamRow({ team, position, isWinner, gameCode, round, games, onClick, re
     const winnerName = result['Winning Team'];
     const bothNull = result['Top Team'] === null && result['Bottom Team'] === null;
     if (!bothNull && round > 0) {
-      if (team.name === actualName) { bg = C.correct; textColor = C.correctText; }
-      else if (actualName !== null) { bg = C.incorrect; textColor = C.incorrectText; strike = true; }
+      const isFinished = result['Game Status'] === 'Final';
+      if (team.name === actualName) {
+        bg = C.correct; textColor = C.correctText;
+      } else if (actualName !== null && isFinished) {
+        bg = C.incorrect; textColor = C.incorrectText; strike = true;
+      }
     }
-    if (winnerName === team.name) checkmark = ' ✓';
+    if (result['Winning Team'] === team.name && result['Game Status'] === 'Final') checkmark = ' ✓';
   }
 
   return (

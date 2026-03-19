@@ -81,9 +81,10 @@ function AdminTeamRow({ name, seed, isWinner, isTbd, onClick }: {
 
 // ─── MatchupCard ──────────────────────────────────────────────────────────────
 
-function AdminMatchupCard({ gameCode, matchups, games, onPick, saving, top }: {
+function AdminMatchupCard({ gameCode, matchups, games, onPick, onClear, saving, top }: {
   gameCode: string; matchups: Matchup[]; games: GamesMap;
   onPick: (gameCode: string, winner: string, loser: string) => void;
+  onClear: (gameCode: string) => void;
   saving: string | null; top: number;
 }) {
   const g = games[gameCode];
@@ -97,7 +98,7 @@ function AdminMatchupCard({ gameCode, matchups, games, onPick, saving, top }: {
       <div style={{
         width: ROUND_W, height: CARD_H,
         background: isSaving ? C.pending : C.cardBg,
-        border: `1px solid ${C.cardBorder}`, borderRadius: 6,
+        border: `1px solid ${winnerName ? '#2a7a2a' : C.cardBorder}`, borderRadius: 6,
         overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
         display: 'flex', flexDirection: 'column',
         opacity: isSaving ? 0.7 : 1, transition: 'opacity 0.15s',
@@ -118,7 +119,17 @@ function AdminMatchupCard({ gameCode, matchups, games, onPick, saving, top }: {
             onPick(gameCode, bottomTeam.name, topTeam.name)}
         />
       </div>
-      <div style={{ fontSize: 9, color: C.seed, textAlign: 'center', marginTop: 2 }}>{gameCode}</div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 2 }}>
+        <div style={{ fontSize: 9, color: C.seed }}>{gameCode}</div>
+        {winnerName && (
+          <button
+            onClick={() => onClear(gameCode)}
+            style={{ fontSize: 9, color: C.seed, background: 'none', border: 'none', cursor: 'pointer', padding: '0 2px', textDecoration: 'underline' }}
+          >
+            clear
+          </button>
+        )}
+      </div>
     </div>
   );
 }
@@ -155,10 +166,11 @@ function ConnectorSVG({ fromRound, dir }: { fromRound: number; dir: 'ltr' | 'rtl
 
 // ─── RoundColumn ──────────────────────────────────────────────────────────────
 
-function AdminRoundColumn({ gameCodes, roundIdx, label, matchups, games, onPick, saving }: {
+function AdminRoundColumn({ gameCodes, roundIdx, label, matchups, games, onPick, onClear, saving }: {
   gameCodes: string[]; roundIdx: number; label: string;
   matchups: Matchup[]; games: GamesMap;
   onPick: (gameCode: string, winner: string, loser: string) => void;
+  onClear: (gameCode: string) => void;
   saving: string | null;
 }) {
   return (
@@ -168,7 +180,7 @@ function AdminRoundColumn({ gameCodes, roundIdx, label, matchups, games, onPick,
       </div>
       <div style={{ position: 'relative', width: ROUND_W, height: REGION_H }}>
         {gameCodes.map((code, i) => (
-          <AdminMatchupCard key={code} gameCode={code} matchups={matchups} games={games} onPick={onPick} saving={saving} top={cardTop(roundIdx, i)} />
+          <AdminMatchupCard key={code} gameCode={code} matchups={matchups} games={games} onPick={onPick} onClear={onClear} saving={saving} top={cardTop(roundIdx, i)} />
         ))}
       </div>
     </div>
@@ -184,14 +196,15 @@ const REGION_GAME_CODES: Record<string, string[][]> = {
   Midwest: [['M1','M2','M3','M4','M5','M6','M7','M8'], ['M9','M10','M11','M12'], ['M13','M14'], ['M15']],
 };
 
-function AdminRegion({ name, matchups, games, onPick, saving, dir }: {
+function AdminRegion({ name, matchups, games, onPick, onClear, saving, dir }: {
   name: string; matchups: Matchup[]; games: GamesMap;
   onPick: (gameCode: string, winner: string, loser: string) => void;
+  onClear: (gameCode: string) => void;
   saving: string | null; dir: 'ltr' | 'rtl';
 }) {
   const rounds = REGION_GAME_CODES[name];
   const columns = ROUND_LABELS.map((label, i) => (
-    <AdminRoundColumn key={i} gameCodes={rounds[i]} roundIdx={i} label={label} matchups={matchups} games={games} onPick={onPick} saving={saving} />
+    <AdminRoundColumn key={i} gameCodes={rounds[i]} roundIdx={i} label={label} matchups={matchups} games={games} onPick={onPick} onClear={onClear} saving={saving} />
   ));
 
   const children: React.ReactNode[] = [];
@@ -289,21 +302,27 @@ export default function AdminBracket({ matchups, games, onResultsChanged }: Admi
   const handlePick = async (gameCode: string, winner: string, loser: string) => {
     const confirm = window.confirm(`Mark ${winner} as winner of ${gameCode}?`);
     if (!confirm) return;
-
     setSaving(gameCode);
     const { error } = await supabase
       .from('results')
       .update({ winning_team: winner, losing_team: loser, game_status: 'Final' })
       .eq('game_code', gameCode);
-
     setSaving(null);
-    if (error) {
-      console.error('Failed to save result:', error);
-      alert('Save failed — check console.');
-    } else {
-      setLastSaved(`${gameCode}: ${winner}`);
-      onResultsChanged();
-    }
+    if (error) { console.error('Failed to save result:', error); alert('Save failed — check console.'); }
+    else { setLastSaved(`${gameCode}: ${winner}`); onResultsChanged(); }
+  };
+
+  const handleClear = async (gameCode: string) => {
+    const confirm = window.confirm(`Clear the result for ${gameCode}?`);
+    if (!confirm) return;
+    setSaving(gameCode);
+    const { error } = await supabase
+      .from('results')
+      .update({ winning_team: null, losing_team: null, game_status: 'Scheduled' })
+      .eq('game_code', gameCode);
+    setSaving(null);
+    if (error) { console.error('Failed to clear result:', error); alert('Clear failed — check console.'); }
+    else { setLastSaved(`${gameCode}: cleared`); onResultsChanged(); }
   };
 
   return (
@@ -317,13 +336,13 @@ export default function AdminBracket({ matchups, games, onResultsChanged }: Admi
       <div style={{ overflowX: 'auto' }}>
         <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'flex-start', gap: 0 }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
-            <AdminRegion name='East'  matchups={matchups} games={games} onPick={handlePick} saving={saving} dir='ltr' />
-            <AdminRegion name='South' matchups={matchups} games={games} onPick={handlePick} saving={saving} dir='ltr' />
+            <AdminRegion name='East'  matchups={matchups} games={games} onPick={handlePick} onClear={handleClear} saving={saving} dir='ltr' />
+            <AdminRegion name='South' matchups={matchups} games={games} onPick={handlePick} onClear={handleClear} saving={saving} dir='ltr' />
           </div>
-          <AdminFinalFour matchups={matchups} games={games} onPick={handlePick} saving={saving} />
+          <AdminFinalFour matchups={matchups} games={games} onPick={handlePick} onClear={handleClear} saving={saving} />
           <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
-            <AdminRegion name='West'    matchups={matchups} games={games} onPick={handlePick} saving={saving} dir='rtl' />
-            <AdminRegion name='Midwest' matchups={matchups} games={games} onPick={handlePick} saving={saving} dir='rtl' />
+            <AdminRegion name='West'    matchups={matchups} games={games} onPick={handlePick} onClear={handleClear} saving={saving} dir='rtl' />
+            <AdminRegion name='Midwest' matchups={matchups} games={games} onPick={handlePick} onClear={handleClear} saving={saving} dir='rtl' />
           </div>
         </div>
       </div>
