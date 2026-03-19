@@ -150,9 +150,10 @@ interface MatchupCardProps {
   showGameCode: boolean;
   readOnly?: boolean;
   eliminated: Set<string>;
+  dir?: 'ltr' | 'rtl';
 }
 
-function MatchupCard({ matchup, top, round, games, onPick, showGameCode, readOnly, eliminated }: MatchupCardProps) {
+function MatchupCard({ matchup, top, round, games, onPick, showGameCode, readOnly, eliminated, dir }: MatchupCardProps) {
   const result = games[matchup.gameCode];
   let pts: number | null = null;
   if (matchup.winner && result && result['Game Status'] === 'Final') {
@@ -179,7 +180,8 @@ function MatchupCard({ matchup, top, round, games, onPick, showGameCode, readOnl
       </div>
       {pts !== null && (
         <div style={{
-          position: 'absolute', top: '50%', right: -10,
+          position: 'absolute', top: '50%',
+          ...(dir === 'rtl' ? { left: -10 } : { right: -10 }),
           transform: 'translateY(-50%)',
           fontSize: 9, fontWeight: 700,
           color: pts > 0 ? C.points : C.pointsNeg,
@@ -245,9 +247,10 @@ interface RoundColumnProps {
   showGameCode: boolean;
   readOnly?: boolean;
   eliminated: Set<string>;
+  dir?: 'ltr' | 'rtl';
 }
 
-function RoundColumn({ matchups, roundIdx, label, games, onPick, showGameCode, readOnly, eliminated }: RoundColumnProps) {
+function RoundColumn({ matchups, roundIdx, label, games, onPick, showGameCode, readOnly, eliminated, dir }: RoundColumnProps) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0 }}>
       <div style={{ fontSize: 10, color: C.roundLabel, marginBottom: 4, whiteSpace: 'nowrap', fontWeight: 600, letterSpacing: '0.03em' }}>
@@ -255,7 +258,7 @@ function RoundColumn({ matchups, roundIdx, label, games, onPick, showGameCode, r
       </div>
       <div style={{ position: 'relative', width: ROUND_W, height: REGION_H }}>
         {matchups.map((m, i) => (
-          <MatchupCard key={m.gameCode} matchup={m} top={cardTop(roundIdx, i)} round={roundIdx} games={games} onPick={onPick} showGameCode={showGameCode} readOnly={readOnly} eliminated={eliminated} />
+          <MatchupCard key={m.gameCode} matchup={m} top={cardTop(roundIdx, i)} round={roundIdx} games={games} onPick={onPick} showGameCode={showGameCode} readOnly={readOnly} eliminated={eliminated} dir={dir} />
         ))}
       </div>
     </div>
@@ -280,7 +283,7 @@ interface RegionProps {
 function Region({ name, matchups, games, onPick, dir, showGameCode, readOnly, eliminated }: RegionProps) {
   const rounds = [matchups.slice(0,8), matchups.slice(8,12), matchups.slice(12,14), matchups.slice(14,15)];
   const columns = ROUND_LABELS.map((label, i) => (
-    <RoundColumn key={i} matchups={rounds[i]} roundIdx={i} label={label} games={games} onPick={onPick} showGameCode={showGameCode} readOnly={readOnly} eliminated={eliminated} />
+    <RoundColumn key={i} matchups={rounds[i]} roundIdx={i} label={label} games={games} onPick={onPick} showGameCode={showGameCode} readOnly={readOnly} eliminated={eliminated} dir={dir} />
   ));
 
   const children: React.ReactNode[] = [];
