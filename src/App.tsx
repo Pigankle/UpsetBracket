@@ -265,7 +265,7 @@ export default function App() {
 
   const Nav = () => (
     <div style={{ background: C.header, color: '#fff', display: 'flex', alignItems: 'center', padding: '0 16px', height: 48, gap: 8, fontFamily: 'system-ui', fontSize: 13 }}>
-      <span style={{ fontWeight: 700, fontSize: 15, marginRight: 16 }}>🏀 2026 Bracket Pool</span>
+      <span style={{ fontWeight: 700, fontSize: 15, marginRight: 16 }}>🏀 McKenzie's Upset Chaos 2026</span>
       <NavBtn label='My Brackets' active={view === 'dashboard'} onClick={() => setView('dashboard')} />
       <NavBtn label='Leaderboard' active={view === 'leaderboard' || view === 'view-bracket'} onClick={() => setView('leaderboard')} />
       {profile.is_admin && <NavBtn label='⚙ Results' active={view === 'admin'} onClick={() => setView('admin')} />}
@@ -388,7 +388,7 @@ export default function App() {
 function PublicNav({ onLogin }: { onLogin: () => void }) {
   return (
     <div style={{ background: C.header, color: '#fff', display: 'flex', alignItems: 'center', padding: '0 16px', height: 48, gap: 8, fontFamily: 'system-ui', fontSize: 13 }}>
-      <span style={{ fontWeight: 700, fontSize: 15, marginRight: 16 }}>🏀 2026 Bracket Pool</span>
+      <span style={{ fontWeight: 700, fontSize: 15, marginRight: 16 }}>🏀 McKenzie's Upset Chaos 2026</span>
       <span style={{ marginLeft: 'auto' }}>
         <button onClick={onLogin} style={{ background: 'none', border: '1px solid rgba(255,255,255,0.4)', borderRadius: 3, color: '#fff', fontSize: 11, padding: '2px 8px', cursor: 'pointer' }}>
           Sign in
