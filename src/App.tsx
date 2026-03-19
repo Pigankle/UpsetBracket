@@ -88,7 +88,27 @@ export default function App() {
 
   const locked = isLocked();
 
-  // Auth + results load in parallel on mount
+  // Auth listener
+  useEffect(() => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        const p = await getProfile(session.user.id);
+        setProfile(p);
+      }
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        const p = await getProfile(session.user.id);
+        setProfile(p);
+      } else {
+        setProfile(null);
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
   const loadResults = async () => {
     const { data, error } = await supabase.from('results').select('*');
     if (error) { console.error('Failed to load results:', error); return; }
@@ -98,52 +118,7 @@ export default function App() {
   };
 
   useEffect(() => {
-    let mounted = true;
-
-    async function init() {
-      const [{ data: { session } }, resultsData] = await Promise.all([
-        supabase.auth.getSession(),
-        supabase.from('results').select('*'),
-      ]);
-
-      if (!mounted) return;
-
-      // Set results
-      if (resultsData.data) {
-        const adapted: Record<string, Record<string, unknown>> = {};
-        (resultsData.data as MarchMadnessGame[]).forEach(g => { adapted[g.game_code] = adaptGame(g); });
-        setGames(adapted);
-      }
-
-      // Set user + profile
-      if (session?.user) {
-        setUser(session.user);
-        const p = await getProfile(session.user.id);
-        if (mounted) setProfile(p);
-      }
-
-      if (mounted) setLoading(false);
-    }
-
-    init();
-
-    // Listen for sign in / sign out only
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (!mounted) return;
-      if (event === 'SIGNED_IN' && session?.user) {
-        setUser(session.user);
-        const p = await getProfile(session.user.id);
-        if (mounted) setProfile(p);
-      } else if (event === 'SIGNED_OUT') {
-        setUser(null);
-        setProfile(null);
-      }
-    });
-
-    return () => {
-      mounted = false;
-      subscription.unsubscribe();
-    };
+    loadResults().then(() => setLoading(false));
   }, []);
 
   useEffect(() => {
