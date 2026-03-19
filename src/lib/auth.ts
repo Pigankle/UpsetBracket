@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+export { supabase };
 
 export interface Profile {
   id: string;
