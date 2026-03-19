@@ -63,13 +63,17 @@ export default function Dashboard({ profile, onOpenBracket, onNewBracket }: Dash
     <div style={{ textAlign: 'center', padding: 40, fontFamily: 'system-ui', color: C.seed }}>Loading...</div>
   );
 
-  const canAddMore = !locked && brackets.length < MAX_BRACKETS;
+  const canAddMore = !locked && (profile.is_admin || brackets.length < MAX_BRACKETS);
 
   return (
     <div style={{ maxWidth: 600, margin: '40px auto', padding: '0 16px', fontFamily: 'system-ui' }}>
       <h2 style={{ color: C.header, margin: '0 0 4px' }}>Welcome, {profile.display_name}</h2>
       <p style={{ color: C.seed, fontSize: 13, margin: '0 0 24px' }}>
-        {locked ? 'Submissions are closed. View your brackets below.' : `You have ${brackets.length} of ${MAX_BRACKETS} brackets.`}
+        {locked
+          ? 'Submissions are closed. View your brackets below.'
+          : profile.is_admin
+            ? `You have ${brackets.length} bracket(s). As admin, you can create unlimited brackets.`
+            : `You have ${brackets.length} of ${MAX_BRACKETS} brackets.`}
       </p>
 
       {/* Own brackets */}

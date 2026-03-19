@@ -76,9 +76,9 @@ export default function App() {
   const [bracketId, setBracketId] = useState<string | null>(null);
   const [bracketName, setBracketName] = useState('');
   const [tiebreakerScore, setTiebreakerScore] = useState('');
-  const [useTestData, setUseTestData] = useState(false);
-  const [matchups, setMatchups] = useState<Matchup[]>(() => createInitialBracket(tournamentData));
-  const [viewMatchups, setViewMatchups] = useState<Matchup[]>(() => createInitialBracket(tournamentData));
+  const [onBehalfOf, setOnBehalfOf] = useState('');
+  const [useTestData, setUseTestData] = useState(false);<Matchup[]>(() => createInitialBracket(tournamentData));
+  const [matchups, setMatchups] = useState = useState<Matchup[]>(() => createInitialBracket(tournamentData));
   const [viewingBracketName, setViewingBracketName] = useState('');
   const [totalScore, setTotalScore] = useState(0);
   const [games, setGames] = useState<Record<string, Record<string, unknown>>>({});
@@ -153,6 +153,7 @@ export default function App() {
   const handleUpdateBracket = (newMatchups: Matchup[]) => setMatchups(newMatchups);
 
   const handleNewBracket = () => {
+    setOnBehalfOf('');
     setBracketId(null);
     setMatchups(createInitialBracket(tournamentData));
     setBracketName('New Bracket');
@@ -186,9 +187,10 @@ export default function App() {
     if (!user || !profile) return;
     setSaving(true);
     setSaveStatus('idle');
+    const personName = (profile.is_admin && onBehalfOf.trim()) ? onBehalfOf.trim() : profile.display_name;
     const saved = matchupsToSavedBracket(matchups, bracketName);
     const payload = {
-      person_name: profile.display_name,
+      person_name: personName,
       bracket_name: bracketName,
       picks: saved.picks,
       tiebreaker: tiebreakerScore ? parseInt(tiebreakerScore) : null,
@@ -304,6 +306,14 @@ export default function App() {
         </button>
         {canEdit ? (
           <>
+            {profile.is_admin && (
+              <input
+                value={onBehalfOf}
+                onChange={e => setOnBehalfOf(e.target.value)}
+                placeholder='On behalf of (optional)'
+                style={{ padding: '5px 8px', borderRadius: 4, border: `1px solid ${C.border}`, fontSize: 12, width: 180, outline: 'none' }}
+              />
+            )}
             <button
               onClick={handleSaveBracket}
               disabled={saving || !bracketName.trim()}
