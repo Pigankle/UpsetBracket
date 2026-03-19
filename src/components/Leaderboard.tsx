@@ -23,6 +23,7 @@ interface ResultRow {
   bottom_team_seed: number | null;
   winning_team_seed: number | null;
   losing_team_seed: number | null;
+  game_status: string;
   points: number;
 }
 
@@ -45,16 +46,27 @@ const MEDAL = ['🥇', '🥈', '🥉'];
 
 function calcCeiling(picks: Record<string, string>, results: ResultRow[]): number {
   const resultMap = Object.fromEntries(results.map(r => [r.game_code, r]));
+
+  // Build eliminated set from final games
+  const eliminated = new Set<string>();
+  for (const r of results) {
+    if (r.game_status === 'Final' && r.losing_team) eliminated.add(r.losing_team);
+  }
+
   let ceiling = 0;
   for (const [gameCode, pickedWinner] of Object.entries(picks)) {
     const result = resultMap[gameCode];
     if (!result) continue;
+    // If picked team already eliminated, they can't score in this or any future game
+    if (eliminated.has(pickedWinner)) continue;
     if (result.winning_team === null) {
+      // Game not yet played and pick still alive
       const pickedSeed = result.top_team === pickedWinner ? result.top_team_seed : result.bottom_team_seed;
       const opponentSeed = result.top_team === pickedWinner ? result.bottom_team_seed : result.top_team_seed;
       const multiplier = Math.max(1, (pickedSeed ?? 0) - (opponentSeed ?? 0));
       ceiling += result.points * multiplier;
     } else if (result.winning_team === pickedWinner) {
+      // Already won
       const multiplier = Math.max(1, (result.winning_team_seed ?? 0) - (result.losing_team_seed ?? 0));
       ceiling += result.points * multiplier;
     }
@@ -78,7 +90,7 @@ export default function Leaderboard({ currentBracketId, onViewBracket }: Leaderb
           .order('tiebreaker', { ascending: true, nullsFirst: false }),
         supabase
           .from('results')
-          .select('game_code, winning_team, losing_team, top_team, bottom_team, top_team_seed, bottom_team_seed, winning_team_seed, losing_team_seed, points'),
+          .select('game_code, winning_team, losing_team, top_team, bottom_team, top_team_seed, bottom_team_seed, winning_team_seed, losing_team_seed, game_status, points'),
       ]);
       setBrackets((bracketData ?? []) as BracketRow[]);
       setResults((resultData ?? []) as ResultRow[]);
