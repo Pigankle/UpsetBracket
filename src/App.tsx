@@ -58,9 +58,14 @@ function calculateScore(matchups: Matchup[], games: Record<string, Record<string
   matchups.forEach(m => {
     if (!m.gameCode || !m.winner) return;
     const g = games[m.gameCode];
-    if (!g) return;
+    if (!g || g['Game Status'] !== 'Final') return;
     const picked = m.winner === 'top' ? m.topTeam.name : m.bottomTeam.name;
-    if (picked === g['Winning Team']) score += (g.points as number);
+    if (picked !== g['Winning Team']) return;
+    const winnerSeed = g['Winning Team Seed'] as number ?? 0;
+    const loserSeed = g['Losing Team Seed'] as number ?? 0;
+    const seedDiff = Math.abs(winnerSeed - loserSeed);
+    const multiplier = Math.max(1, winnerSeed - loserSeed);
+    score += (g.points as number) * multiplier;
   });
   return score;
 }
@@ -100,16 +105,6 @@ export default function App() {
 
   const handleResultsChanged = async () => {
     await loadResults();
-    const { data: allBrackets } = await supabase
-      .from('brackets')
-      .select('id, picks');
-    if (allBrackets) {
-      await Promise.all(
-        allBrackets.map(b =>
-          supabase.from('brackets').update({ picks: b.picks }).eq('id', b.id)
-        )
-      );
-    }
   };
 
   useEffect(() => {
