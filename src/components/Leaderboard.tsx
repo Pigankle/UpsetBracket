@@ -32,7 +32,6 @@ interface LeaderboardProps {
 }
 
 const C = {
-  bg: '#f5f5f5',
   header: '#1a1a2e',
   headerText: '#ffffff',
   border: '#d0d0d0',
@@ -50,20 +49,15 @@ function calcCeiling(picks: Record<string, string>, results: ResultRow[]): numbe
   for (const [gameCode, pickedWinner] of Object.entries(picks)) {
     const result = resultMap[gameCode];
     if (!result) continue;
-
     if (result.winning_team === null) {
-      // Game not yet played — pick still alive, calculate potential score
-      // We know the seeds of both teams
       const pickedSeed = result.top_team === pickedWinner ? result.top_team_seed : result.bottom_team_seed;
       const opponentSeed = result.top_team === pickedWinner ? result.bottom_team_seed : result.top_team_seed;
       const multiplier = Math.max(1, (pickedSeed ?? 0) - (opponentSeed ?? 0));
       ceiling += result.points * multiplier;
     } else if (result.winning_team === pickedWinner) {
-      // Already won — use actual scored points
       const multiplier = Math.max(1, (result.winning_team_seed ?? 0) - (result.losing_team_seed ?? 0));
       ceiling += result.points * multiplier;
     }
-    // Wrong pick: contributes 0
   }
   return ceiling;
 }
@@ -108,15 +102,13 @@ export default function Leaderboard({ currentBracketId, onViewBracket }: Leaderb
   const canView = locked;
 
   return (
-    <div style={{ maxWidth: 750, margin: '0 auto', padding: '0 16px', fontFamily: 'system-ui' }}>      {!locked && (
+    <div style={{ maxWidth: 750, margin: '0 auto', padding: '0 16px', fontFamily: 'system-ui' }}>
+      {!locked && (
         <div style={{ background: '#fff8e1', border: '1px solid #f0c040', borderRadius: 6, padding: '10px 16px', marginBottom: 16, fontSize: 13, color: '#7a5c00' }}>
           🔒 Brackets are hidden until the submission deadline has passed. Only your own bracket is visible until then.
         </div>
       )}
-
-      <div style={{ fontSize: 11, color: C.seed, textAlign: 'right', marginBottom: 8, fontStyle: 'italic' }}>
-        Note: Ceiling is approximate — not all possible outcomes are checked.
-      </div>
+      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
         <thead>
           <tr style={{ background: C.header, color: C.headerText }}>
             <th style={{ padding: '8px 10px', textAlign: 'left', width: 36 }}>#</th>
@@ -133,19 +125,9 @@ export default function Leaderboard({ currentBracketId, onViewBracket }: Leaderb
             const isOwn = b.id === currentBracketId;
             const visible = canView || isOwn;
             const ceiling = visible ? calcCeiling(b.picks, results) : null;
-
             return (
-              <tr
-                key={b.id}
-                style={{
-                  background: isOwn ? '#eef2ff' : i % 2 === 0 ? '#fff' : '#fafafa',
-                  borderBottom: `1px solid ${C.border}`,
-                  fontWeight: isOwn ? 700 : 400,
-                }}
-              >
-                <td style={{ padding: '8px 10px', color: C.seed }}>
-                  {i < 3 ? MEDAL[i] : i + 1}
-                </td>
+              <tr key={b.id} style={{ background: isOwn ? '#eef2ff' : i % 2 === 0 ? '#fff' : '#fafafa', borderBottom: `1px solid ${C.border}`, fontWeight: isOwn ? 700 : 400 }}>
+                <td style={{ padding: '8px 10px', color: C.seed }}>{i < 3 ? MEDAL[i] : i + 1}</td>
                 <td style={{ padding: '8px 10px', color: C.text }}>
                   {visible ? `${b.person_name} — ${b.bracket_name}` : '—'}
                   {isOwn && <span style={{ fontSize: 10, color: C.seed, marginLeft: 6 }}>(you)</span>}
@@ -164,10 +146,7 @@ export default function Leaderboard({ currentBracketId, onViewBracket }: Leaderb
                 </td>
                 {canView && (
                   <td style={{ padding: '8px 10px', textAlign: 'center' }}>
-                    <button
-                      onClick={() => onViewBracket(b.id)}
-                      style={{ fontSize: 11, padding: '2px 8px', borderRadius: 3, border: `1px solid ${C.border}`, background: '#fff', cursor: 'pointer', color: C.header }}
-                    >
+                    <button onClick={() => onViewBracket(b.id)} style={{ fontSize: 11, padding: '2px 8px', borderRadius: 3, border: `1px solid ${C.border}`, background: '#fff', cursor: 'pointer', color: C.header }}>
                       View
                     </button>
                   </td>
