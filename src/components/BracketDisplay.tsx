@@ -23,8 +23,8 @@ interface BracketDisplayProps {
 
 // ─── Layout constants ─────────────────────────────────────────────────────────
 
-const CARD_H = 48;
-const CARD_GAP = 6;
+const CARD_H = 56;
+const CARD_GAP = 8;
 const ROUND_W = 136;
 const CONNECTOR_W = 16;
 const SLOT = CARD_H + CARD_GAP;
@@ -64,6 +64,17 @@ const C = {
   roundLabel: '#888888',
 };
 
+// Build set of eliminated teams from all final game results
+function buildEliminatedTeams(games: GamesMap): Set<string> {
+  const eliminated = new Set<string>();
+  for (const g of Object.values(games)) {
+    if (g['Game Status'] === 'Final' && g['Losing Team']) {
+      eliminated.add(g['Losing Team'] as string);
+    }
+  }
+  return eliminated;
+}
+
 // ─── TeamRow ──────────────────────────────────────────────────────────────────
 
 interface TeamRowProps {
@@ -75,9 +86,10 @@ interface TeamRowProps {
   games: GamesMap;
   onClick: () => void;
   readOnly?: boolean;
+  eliminated: Set<string>;
 }
 
-function TeamRow({ team, position, isWinner, gameCode, round, games, onClick, readOnly }: TeamRowProps) {
+function TeamRow({ team, position, isWinner, gameCode, round, games, onClick, readOnly, eliminated }: TeamRowProps) {
   const result = games[gameCode];
   const isTbd = team.name === 'TBD';
 
@@ -86,15 +98,17 @@ function TeamRow({ team, position, isWinner, gameCode, round, games, onClick, re
   let strike = false;
   let checkmark = '';
 
-  if (result && !isTbd) {
-    const winnerName = result['Winning Team'];
-    const isFinished = result['Game Status'] === 'Final';
-
-    if (isFinished) {
-      if (winnerName === team.name) {
-        bg = C.correct; textColor = C.correctText;
+  if (!isTbd) {
+    // If team is eliminated (lost any previous game), always show red
+    if (eliminated.has(team.name)) {
+      bg = C.incorrect; textColor = C.incorrectText; strike = true;
+    }
+    // Check current game result
+    if (result && result['Game Status'] === 'Final') {
+      if (result['Winning Team'] === team.name) {
+        bg = C.correct; textColor = C.correctText; strike = false;
         checkmark = ' ✓';
-      } else {
+      } else if (result['Losing Team'] === team.name) {
         bg = C.incorrect; textColor = C.incorrectText; strike = true;
       }
     }
@@ -135,9 +149,10 @@ interface MatchupCardProps {
   onPick: (code: string, pos: 'top' | 'bottom') => void;
   showGameCode: boolean;
   readOnly?: boolean;
+  eliminated: Set<string>;
 }
 
-function MatchupCard({ matchup, top, round, games, onPick, showGameCode, readOnly }: MatchupCardProps) {
+function MatchupCard({ matchup, top, round, games, onPick, showGameCode, readOnly, eliminated }: MatchupCardProps) {
   const result = games[matchup.gameCode];
   let pts: number | null = null;
   if (matchup.winner && result && result['Game Status'] === 'Final') {
@@ -170,9 +185,9 @@ function MatchupCard({ matchup, top, round, games, onPick, showGameCode, readOnl
             {matchup.gameCode}
           </div>
         )}
-        <TeamRow team={matchup.topTeam} position='top' isWinner={matchup.winner === 'top'} gameCode={matchup.gameCode} round={round} games={games} onClick={() => onPick(matchup.gameCode, 'top')} readOnly={readOnly} />
+        <TeamRow team={matchup.topTeam} position='top' isWinner={matchup.winner === 'top'} gameCode={matchup.gameCode} round={round} games={games} onClick={() => onPick(matchup.gameCode, 'top')} readOnly={readOnly} eliminated={eliminated} />
         <div style={{ height: 1, background: C.divider, flexShrink: 0 }} />
-        <TeamRow team={matchup.bottomTeam} position='bottom' isWinner={matchup.winner === 'bottom'} gameCode={matchup.gameCode} round={round} games={games} onClick={() => onPick(matchup.gameCode, 'bottom')} readOnly={readOnly} />
+        <TeamRow team={matchup.bottomTeam} position='bottom' isWinner={matchup.winner === 'bottom'} gameCode={matchup.gameCode} round={round} games={games} onClick={() => onPick(matchup.gameCode, 'bottom')} readOnly={readOnly} eliminated={eliminated} />
       </div>
     </div>
   );
@@ -224,9 +239,10 @@ interface RoundColumnProps {
   onPick: (code: string, pos: 'top' | 'bottom') => void;
   showGameCode: boolean;
   readOnly?: boolean;
+  eliminated: Set<string>;
 }
 
-function RoundColumn({ matchups, roundIdx, label, games, onPick, showGameCode, readOnly }: RoundColumnProps) {
+function RoundColumn({ matchups, roundIdx, label, games, onPick, showGameCode, readOnly, eliminated }: RoundColumnProps) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0 }}>
       <div style={{ fontSize: 10, color: C.roundLabel, marginBottom: 4, whiteSpace: 'nowrap', fontWeight: 600, letterSpacing: '0.03em' }}>
@@ -234,7 +250,7 @@ function RoundColumn({ matchups, roundIdx, label, games, onPick, showGameCode, r
       </div>
       <div style={{ position: 'relative', width: ROUND_W, height: REGION_H }}>
         {matchups.map((m, i) => (
-          <MatchupCard key={m.gameCode} matchup={m} top={cardTop(roundIdx, i)} round={roundIdx} games={games} onPick={onPick} showGameCode={showGameCode} readOnly={readOnly} />
+          <MatchupCard key={m.gameCode} matchup={m} top={cardTop(roundIdx, i)} round={roundIdx} games={games} onPick={onPick} showGameCode={showGameCode} readOnly={readOnly} eliminated={eliminated} />
         ))}
       </div>
     </div>
@@ -253,12 +269,13 @@ interface RegionProps {
   dir: 'ltr' | 'rtl';
   showGameCode: boolean;
   readOnly?: boolean;
+  eliminated: Set<string>;
 }
 
-function Region({ name, matchups, games, onPick, dir, showGameCode, readOnly }: RegionProps) {
+function Region({ name, matchups, games, onPick, dir, showGameCode, readOnly, eliminated }: RegionProps) {
   const rounds = [matchups.slice(0,8), matchups.slice(8,12), matchups.slice(12,14), matchups.slice(14,15)];
   const columns = ROUND_LABELS.map((label, i) => (
-    <RoundColumn key={i} matchups={rounds[i]} roundIdx={i} label={label} games={games} onPick={onPick} showGameCode={showGameCode} readOnly={readOnly} />
+    <RoundColumn key={i} matchups={rounds[i]} roundIdx={i} label={label} games={games} onPick={onPick} showGameCode={showGameCode} readOnly={readOnly} eliminated={eliminated} />
   ));
 
   const children: React.ReactNode[] = [];
@@ -296,10 +313,10 @@ function Region({ name, matchups, games, onPick, dir, showGameCode, readOnly }: 
 
 // ─── FinalCard ────────────────────────────────────────────────────────────────
 
-function FinalCard({ matchup, round, games, onPick, readOnly }: {
+function FinalCard({ matchup, round, games, onPick, readOnly, eliminated }: {
   matchup: Matchup; round: number; games: GamesMap;
   onPick: (code: string, pos: 'top' | 'bottom') => void;
-  readOnly?: boolean;
+  readOnly?: boolean; eliminated: Set<string>;
 }) {
   const result = games[matchup.gameCode];
   let pts: number | null = null;
@@ -310,9 +327,9 @@ function FinalCard({ matchup, round, games, onPick, readOnly }: {
 
   return (
     <div style={{ width: ROUND_W, height: CARD_H, background: C.cardBg, border: `1px solid ${C.cardBorder}`, borderRadius: 6, overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', display: 'flex', flexDirection: 'column', position: 'relative', flexShrink: 0 }}>
-      <TeamRow team={matchup.topTeam} position='top' isWinner={matchup.winner === 'top'} gameCode={matchup.gameCode} round={round} games={games} onClick={() => onPick(matchup.gameCode, 'top')} readOnly={readOnly} />
+      <TeamRow team={matchup.topTeam} position='top' isWinner={matchup.winner === 'top'} gameCode={matchup.gameCode} round={round} games={games} onClick={() => onPick(matchup.gameCode, 'top')} readOnly={readOnly} eliminated={eliminated} />
       <div style={{ height: 1, background: C.divider }} />
-      <TeamRow team={matchup.bottomTeam} position='bottom' isWinner={matchup.winner === 'bottom'} gameCode={matchup.gameCode} round={round} games={games} onClick={() => onPick(matchup.gameCode, 'bottom')} readOnly={readOnly} />
+      <TeamRow team={matchup.bottomTeam} position='bottom' isWinner={matchup.winner === 'bottom'} gameCode={matchup.gameCode} round={round} games={games} onClick={() => onPick(matchup.gameCode, 'bottom')} readOnly={readOnly} eliminated={eliminated} />
       {pts !== null && (
         <div style={{ position: 'absolute', right: 4, bottom: 2, fontSize: 10, fontWeight: 700, color: pts > 0 ? C.points : C.pointsNeg }}>
           +{pts}
@@ -335,9 +352,10 @@ interface FinalFourCenterProps {
   tiebreakerScore: string;
   onUpdateTiebreakerScore: (s: string) => void;
   readOnly?: boolean;
+  eliminated: Set<string>;
 }
 
-function FinalFourCenter({ matchups, games, onPick, bracketName, onUpdateBracketName, totalScore, useTestData, tiebreakerScore, onUpdateTiebreakerScore, readOnly }: FinalFourCenterProps) {
+function FinalFourCenter({ matchups, games, onPick, bracketName, onUpdateBracketName, totalScore, useTestData, tiebreakerScore, onUpdateTiebreakerScore, readOnly, eliminated }: FinalFourCenterProps) {
   const [ff1, ff2, ch] = matchups;
 
   return (
@@ -357,11 +375,11 @@ function FinalFourCenter({ matchups, games, onPick, bracketName, onUpdateBracket
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 16, width: '100%', alignItems: 'center' }}>
         <div>
           <div style={{ fontSize: 9, color: C.roundLabel, textAlign: 'center', marginBottom: 4 }}>{ff1.gameCode}</div>
-          <FinalCard matchup={ff1} round={3} games={games} onPick={onPick} readOnly={readOnly} />
+          <FinalCard matchup={ff1} round={3} games={games} onPick={onPick} readOnly={readOnly} eliminated={eliminated} />
         </div>
         <div>
           <div style={{ fontSize: 9, color: C.roundLabel, textAlign: 'center', marginBottom: 4 }}>{ff2.gameCode}</div>
-          <FinalCard matchup={ff2} round={3} games={games} onPick={onPick} readOnly={readOnly} />
+          <FinalCard matchup={ff2} round={3} games={games} onPick={onPick} readOnly={readOnly} eliminated={eliminated} />
         </div>
       </div>
 
@@ -369,7 +387,7 @@ function FinalFourCenter({ matchups, games, onPick, bracketName, onUpdateBracket
         CHAMPIONSHIP
       </div>
 
-      <FinalCard matchup={ch} round={4} games={games} onPick={onPick} readOnly={readOnly} />
+      <FinalCard matchup={ch} round={4} games={games} onPick={onPick} readOnly={readOnly} eliminated={eliminated} />
 
       {ch.winner && (
         <div style={{ marginTop: 10, textAlign: 'center' }}>
@@ -487,6 +505,7 @@ export default function BracketDisplay({
   const ff2 = matchups.find(m => m.gameCode === 'FF2')!;
   const ch1 = matchups.find(m => m.gameCode === 'CH1')!;
   const ffMid = [ff1, ff2, ch1];
+  const eliminated = buildEliminatedTeams(games);
 
   const roundScores = calcRoundScores(matchups, games);
 
@@ -495,8 +514,8 @@ export default function BracketDisplay({
       <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'flex-start', gap: 0, overflowX: 'auto' }}>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
-          <Region name='East'  matchups={east}  games={games} onPick={handlePick} dir='ltr' showGameCode={showGameCode} readOnly={readOnly} />
-          <Region name='South' matchups={south} games={games} onPick={handlePick} dir='ltr' showGameCode={showGameCode} readOnly={readOnly} />
+          <Region name='East'  matchups={east}  games={games} onPick={handlePick} dir='ltr' showGameCode={showGameCode} readOnly={readOnly} eliminated={eliminated} />
+          <Region name='South' matchups={south} games={games} onPick={handlePick} dir='ltr' showGameCode={showGameCode} readOnly={readOnly} eliminated={eliminated} />
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignSelf: 'center', padding: '0 16px' }}>
@@ -505,7 +524,7 @@ export default function BracketDisplay({
             bracketName={bracketName} onUpdateBracketName={onUpdateBracketName}
             totalScore={totalScore} useTestData={useTestData}
             tiebreakerScore={tiebreakerScore} onUpdateTiebreakerScore={onUpdateTiebreakerScore}
-            readOnly={readOnly}
+            readOnly={readOnly} eliminated={eliminated}
           />
           <div style={{ marginTop: 12, fontSize: 11, color: C.text }}>
             {roundScores.map(r => (
@@ -518,8 +537,8 @@ export default function BracketDisplay({
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
-          <Region name='West'    matchups={west}    games={games} onPick={handlePick} dir='rtl' showGameCode={showGameCode} readOnly={readOnly} />
-          <Region name='Midwest' matchups={midwest} games={games} onPick={handlePick} dir='rtl' showGameCode={showGameCode} readOnly={readOnly} />
+          <Region name='West'    matchups={west}    games={games} onPick={handlePick} dir='rtl' showGameCode={showGameCode} readOnly={readOnly} eliminated={eliminated} />
+          <Region name='Midwest' matchups={midwest} games={games} onPick={handlePick} dir='rtl' showGameCode={showGameCode} readOnly={readOnly} eliminated={eliminated} />
         </div>
       </div>
 
