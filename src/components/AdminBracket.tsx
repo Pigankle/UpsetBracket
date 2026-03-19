@@ -299,7 +299,6 @@ export default function AdminBracket({ matchups, games, onResultsChanged }: Admi
         }).eq('game_code', gameCode),
       ];
 
-      // Clear the winner from the next game's slot
       const nextInfo = gameFlowMap[gameCode];
       if (nextInfo) {
         const col = nextInfo.position === 'top' ? 'top_team' : 'bottom_team';
@@ -328,9 +327,10 @@ export default function AdminBracket({ matchups, games, onResultsChanged }: Admi
       if (nextInfo) {
         const col = nextInfo.position === 'top' ? 'top_team' : 'bottom_team';
         const seedCol = nextInfo.position === 'top' ? 'top_team_seed' : 'bottom_team_seed';
+        const nextUpdate: Record<string, unknown> = { [col]: winner };
+        if (winnerSeed != null) nextUpdate[seedCol] = winnerSeed;
         updates.push(
-          supabase.from('results').update({ [col]: winner, [seedCol]: winnerSeed })
-            .eq('game_code', nextInfo.nextGame)
+          supabase.from('results').update(nextUpdate).eq('game_code', nextInfo.nextGame)
         );
       }
 
