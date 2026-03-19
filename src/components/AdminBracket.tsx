@@ -13,8 +13,8 @@ interface AdminBracketProps {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const CARD_H = 48;
-const CARD_GAP = 6;
+const CARD_H = 56;
+const CARD_GAP = 8;
 const ROUND_W = 136;
 const CONNECTOR_W = 16;
 const SLOT = CARD_H + CARD_GAP;
@@ -295,9 +295,18 @@ export default function AdminBracket({ games, onResultsChanged }: AdminBracketPr
       setLastSaved(`${gameCode}: cleared`);
     } else {
       // Set winner
+      const winnerSeed = (games[gameCode]?.['Top Team'] === winner
+        ? games[gameCode]?.['Top Team Seed']
+        : games[gameCode]?.['Bottom Team Seed']) as number | null;
+      const loserSeed = (games[gameCode]?.['Top Team'] === winner
+        ? games[gameCode]?.['Bottom Team Seed']
+        : games[gameCode]?.['Top Team Seed']) as number | null;
+
       updates.push(
         supabase.from('results').update({
-          winning_team: winner, losing_team: loser, game_status: 'Final',
+          winning_team: winner, losing_team: loser,
+          winning_team_seed: winnerSeed, losing_team_seed: loserSeed,
+          game_status: 'Final',
         }).eq('game_code', gameCode)
       );
       // Propagate winner into the immediate next slot only
