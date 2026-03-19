@@ -236,3 +236,4 @@ export function printBracket(matchups: Matchup[], games: GamesMap, bracketName: 
   w.document.close();
   w.onload = () => { w.print(); };
 }
+ 
