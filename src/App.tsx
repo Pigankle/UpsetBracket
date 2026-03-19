@@ -98,6 +98,11 @@ export default function App() {
     setGames(adapted);
   };
 
+  const handleResultsChanged = async () => {
+    await supabase.rpc('recalculate_all_scores');
+    await loadResults();
+  };
+
   useEffect(() => {
     let mounted = true;
 
@@ -317,7 +322,7 @@ export default function App() {
   if (view === 'admin') return (
     <div style={{ minHeight: '100vh', background: '#f5f5f5', fontFamily: 'system-ui' }}>
       <Nav />
-              <AdminBracket games={games} onResultsChanged={loadResults} />
+              <AdminBracket games={games} onResultsChanged={handleResultsChanged} />
     </div>
   );
 
