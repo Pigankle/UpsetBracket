@@ -207,7 +207,7 @@
         "seed": "2"
       },
       "gameCode": "E15",
-      "nextMatchupIndex": 60,
+      "nextMatchupIndex": 61,
       "nextPosition": "top",
       "winner": "bottom"
     },
@@ -417,7 +417,7 @@
         "seed": "3"
       },
       "gameCode": "W15",
-      "nextMatchupIndex": 61,
+      "nextMatchupIndex": 60,
       "nextPosition": "bottom",
       "winner": "bottom"
     },
@@ -627,7 +627,7 @@
         "seed": "7"
       },
       "gameCode": "S15",
-      "nextMatchupIndex": 61,
+      "nextMatchupIndex": 60,
       "nextPosition": "top",
       "winner": "bottom"
     },
@@ -837,7 +837,7 @@
         "seed": "2"
       },
       "gameCode": "M15",
-      "nextMatchupIndex": 60,
+      "nextMatchupIndex": 61,
       "nextPosition": "bottom",
       "winner": "bottom"
     },

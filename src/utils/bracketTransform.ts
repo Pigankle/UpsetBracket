@@ -4,12 +4,16 @@ interface Team {
   score?: string;
 }
 
+export interface SavedBracket {
+  name: string;
+  picks: { [gameCode: string]: string };
+  totalScore?: number;
+}
+
 interface Matchup {
   topTeam: Team;
   bottomTeam: Team;
   winner?: "top" | "bottom";
-  nextMatchupIndex?: number;
-  nextPosition?: "top" | "bottom";
   gameCode: string;
 }
 
@@ -42,7 +46,7 @@ interface TournamentData {
 }
 
 // Mapping of game codes to their next game and position
-const gameFlowMap: {
+export const gameFlowMap: {
   [key: string]: { nextGame: string; position: "top" | "bottom" };
 } = {
   // East Region
@@ -238,23 +242,14 @@ const seedMap: { [key: string]: [string, string] } = {
 };
 
 export function createInitialBracket(
-  tournamentData: TournamentData
+  tournamentData: TournamentData,
+  savedBracket?: SavedBracket
 ): Matchup[] {
   const matchups: Matchup[] = new Array(63).fill(null).map(() => ({
     topTeam: { name: "TBD", seed: "-" },
     bottomTeam: { name: "TBD", seed: "-" },
     gameCode: "",
   }));
-
-  // Helper function to set next matchup information
-  const setNextMatchup = (gameCode: string, matchupIndex: number) => {
-    const nextInfo = gameFlowMap[gameCode];
-    if (nextInfo) {
-      const nextMatchupIndex = gameCodeToIndex[nextInfo.nextGame];
-      matchups[matchupIndex].nextMatchupIndex = nextMatchupIndex;
-      matchups[matchupIndex].nextPosition = nextInfo.position;
-    }
-  };
 
   // Process each region
   Object.entries(tournamentData.regions).forEach(([regionName, region]) => {
@@ -268,7 +263,6 @@ export function createInitialBracket(
         bottomTeam: { name: bottom.name, seed: bottom.seed.toString() },
         gameCode: game.game_code,
       };
-      setNextMatchup(game.game_code, matchupIndex);
     });
 
     // Set up empty matchups for later rounds
@@ -280,7 +274,6 @@ export function createInitialBracket(
           bottomTeam: { name: "TBD", seed: "-" },
           gameCode: game.game_code,
         };
-        setNextMatchup(game.game_code, matchupIndex);
       });
     });
   });
@@ -293,19 +286,74 @@ export function createInitialBracket(
       bottomTeam: { name: "TBD", seed: "-" },
       gameCode: game.game_code,
     };
-    setNextMatchup(game.game_code, matchupIndex);
   });
 
   // Process Championship
-  const championshipIndex =
-    gameCodeToIndex[tournamentData.championship.game_code];
+  const championshipIndex = gameCodeToIndex[tournamentData.championship.game_code];
   matchups[championshipIndex] = {
     topTeam: { name: "TBD", seed: "-" },
     bottomTeam: { name: "TBD", seed: "-" },
     gameCode: tournamentData.championship.game_code,
   };
 
+  // If we have saved picks, apply them
+  if (savedBracket) {
+    applyPicks(matchups, savedBracket.picks);
+  }
+
   return matchups;
+}
+
+// Helper function to find a team's name in a matchup
+function findTeamInMatchup(matchup: Matchup, teamName: string): "top" | "bottom" | undefined {
+  if (matchup.topTeam.name === teamName) return "top";
+  if (matchup.bottomTeam.name === teamName) return "bottom";
+  return undefined;
+}
+
+// Apply saved picks to a bracket
+function applyPicks(matchups: Matchup[], picks: { [gameCode: string]: string }) {
+  // Process picks in order from first round to championship
+  const rounds = [
+    // Round of 64
+    ...Array.from({ length: 8 }, (_, i) => [`E${i + 1}`, `W${i + 1}`, `S${i + 1}`, `M${i + 1}`]).flat(),
+    // Round of 32
+    ...Array.from({ length: 4 }, (_, i) => [`E${i + 9}`, `W${i + 9}`, `S${i + 9}`, `M${i + 9}`]).flat(),
+    // Sweet 16
+    ...Array.from({ length: 2 }, (_, i) => [`E${i + 13}`, `W${i + 13}`, `S${i + 13}`, `M${i + 13}`]).flat(),
+    // Elite Eight
+    [`E15`, `W15`, `S15`, `M15`],
+    // Final Four and Championship
+    [`FF1`, `FF2`, `CH1`]
+  ].flat();
+
+  rounds.forEach(gameCode => {
+    const pick = picks[gameCode];
+    if (!pick) return;
+
+    const matchupIndex = gameCodeToIndex[gameCode];
+    const matchup = matchups[matchupIndex];
+    
+    // Find which position the winning team is in
+    const winnerPosition = findTeamInMatchup(matchup, pick);
+    if (winnerPosition) {
+      matchup.winner = winnerPosition;
+
+      // Propagate the winner to the next game
+      const nextInfo = gameFlowMap[gameCode];
+      if (nextInfo) {
+        const nextMatchupIndex = gameCodeToIndex[nextInfo.nextGame];
+        const nextMatchup = matchups[nextMatchupIndex];
+        const winningTeam = winnerPosition === "top" ? matchup.topTeam : matchup.bottomTeam;
+        
+        if (nextInfo.position === "top") {
+          nextMatchup.topTeam = winningTeam;
+        } else {
+          nextMatchup.bottomTeam = winningTeam;
+        }
+      }
+    }
+  });
 }
 
 function getNextMatchupIndex(index: number): number | undefined {

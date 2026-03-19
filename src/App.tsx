@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
 import { Container, Typography, Box, Button } from "@mui/material";
 import BracketDisplay from "./components/BracketDisplay";
-import { createInitialBracket, Matchup } from "./utils/bracketTransform";
+import { createInitialBracket, Matchup, SavedBracket } from "./utils/bracketTransform";
 import tournamentData from "./data/ncaa_2025_bracket.json";
 import marchMadnessGames from "./data/march_madness_games.json";
 import marchMadnessGamesTest from "./data/march_madness_games_TEST_DATA.json";
@@ -106,9 +106,17 @@ export default function App() {
   };
 
   const handleSaveBracket = () => {
+    // Convert matchups to picks format
+    const picks: { [key: string]: string } = {};
+    matchups.forEach((matchup) => {
+      if (matchup.gameCode && matchup.winner) {
+        picks[matchup.gameCode] = matchup.winner === "top" ? matchup.topTeam.name : matchup.bottomTeam.name;
+      }
+    });
+
     const bracketData = {
       name: bracketName,
-      matchups,
+      picks,
       totalScore,
     };
     const blob = new Blob([JSON.stringify(bracketData, null, 2)], {
@@ -135,8 +143,10 @@ export default function App() {
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
-        const bracketData = JSON.parse(e.target?.result as string);
-        setMatchups(bracketData.matchups);
+        const bracketData = JSON.parse(e.target?.result as string) as SavedBracket;
+        // Create a new bracket with the saved picks
+        const newMatchups = createInitialBracket(tournamentData, bracketData);
+        setMatchups(newMatchups);
         setBracketName(bracketData.name || "");
         setTotalScore(bracketData.totalScore || 0);
       } catch (error) {

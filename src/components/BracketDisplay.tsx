@@ -9,7 +9,7 @@ import {
 } from "@mui/material";
 import { styled } from "@mui/material/styles";
 import type { Team, Matchup } from "../utils/bracketTransform";
-import { gameCodeToIndex } from "../utils/bracketTransform";
+import { gameCodeToIndex, gameFlowMap } from "../utils/bracketTransform";
 import marchMadnessGames from "../data/march_madness_games.json";
 import marchMadnessGamesTest from "../data/march_madness_games_TEST_DATA.json";
 import bracketStructure from "../data/ncaa_2025_bracket.json";
@@ -393,16 +393,19 @@ export default function BracketDisplay({
     currentMatchup.winner = position;
 
     // Track the path of teams that need to be cleared
-    const clearPath = (matchupIndex: number, position: "top" | "bottom") => {
+    const clearPath = (gameCode: string, position: "top" | "bottom") => {
+      const matchupIndex = gameCodeToIndex[gameCode];
       const matchup = newMatchups[matchupIndex];
 
-      // If this matchup has no next matchup, we're done
-      if (matchup.nextMatchupIndex === undefined) {
+      // Get the next game info from gameFlowMap
+      const nextInfo = gameFlowMap[gameCode];
+      if (!nextInfo) {
         return;
       }
 
-      const nextMatchup = newMatchups[matchup.nextMatchupIndex];
-      const nextPosition = matchup.nextPosition;
+      const nextMatchupIndex = gameCodeToIndex[nextInfo.nextGame];
+      const nextMatchup = newMatchups[nextMatchupIndex];
+      const nextPosition = nextInfo.position;
 
       // Update the team in the next matchup
       if (matchup === currentMatchup) {
@@ -419,7 +422,7 @@ export default function BracketDisplay({
           if (nextMatchup.winner === "top") {
             nextMatchup.winner = undefined;
             nextMatchup.topTeam = { name: "TBD", seed: "0" };
-            clearPath(matchup.nextMatchupIndex, "top");
+            clearPath(nextInfo.nextGame, "top");
           } else {
             // Just clear the team but preserve the winner if it was the other team
             nextMatchup.topTeam = { name: "TBD", seed: "0" };
@@ -429,7 +432,7 @@ export default function BracketDisplay({
           if (nextMatchup.winner === "bottom") {
             nextMatchup.winner = undefined;
             nextMatchup.bottomTeam = { name: "TBD", seed: "0" };
-            clearPath(matchup.nextMatchupIndex, "bottom");
+            clearPath(nextInfo.nextGame, "bottom");
           } else {
             // Just clear the team but preserve the winner if it was the other team
             nextMatchup.bottomTeam = { name: "TBD", seed: "0" };
@@ -439,7 +442,7 @@ export default function BracketDisplay({
     };
 
     // Start clearing the path from the current matchup
-    clearPath(matchupIndex, position);
+    clearPath(gameCode, position);
 
     setMatchups(newMatchups);
     onUpdateBracket(newMatchups);
@@ -502,12 +505,12 @@ export default function BracketDisplay({
           position="bottom"
           marchMadnessGames={typedMarchMadnessGames}
         />
-        {matchup.nextMatchupIndex !== undefined && (
+        {gameFlowMap[matchup.gameCode] && (
           <MatchupConnector
             gameCode={matchup.gameCode}
             sx={{
-              top: matchup.nextPosition === "top" ? "50%" : undefined,
-              bottom: matchup.nextPosition === "bottom" ? "50%" : undefined,
+              top: gameFlowMap[matchup.gameCode].position === "top" ? "50%" : undefined,
+              bottom: gameFlowMap[matchup.gameCode].position === "bottom" ? "50%" : undefined,
             }}
           />
         )}
@@ -618,7 +621,7 @@ export default function BracketDisplay({
             }}
           >
             <Round>
-              {renderMatchup(matchups[61], 61, false, 3)}{" "}
+              {renderMatchup(matchups[60], 60, false, 3)}{" "}
               {/* FF1: South vs West */}
             </Round>
           </Box>
@@ -640,7 +643,7 @@ export default function BracketDisplay({
             }}
           >
             <Round>
-              {renderMatchup(matchups[60], 60, false, 3)}{" "}
+              {renderMatchup(matchups[61], 61, false, 3)}{" "}
               {/* FF2: East vs Midwest */}
             </Round>
           </Box>
