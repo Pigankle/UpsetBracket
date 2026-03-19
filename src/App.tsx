@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import BracketDisplay from './components/BracketDisplay';
+import Leaderboard from './components/Leaderboard';
 import { createInitialBracket, Matchup, SavedBracket } from './utils/bracketTransform';
 import tournamentData from './data/ncaa_2025_bracket.json';
 import { supabase } from './lib/supabase';
+import { isLocked, deadlineLabel } from './lib/deadline';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -29,7 +31,8 @@ interface MarchMadnessGame {
   points: number;
 }
 
-// BracketDisplay expects the old camelCase/spaced key format — adapt from Supabase snake_case
+type View = 'landing' | 'bracket' | 'leaderboard' | 'view-bracket';
+
 function adaptGame(g: MarchMadnessGame): Record<string, unknown> {
   return {
     'Top Team': g.top_team,
@@ -54,8 +57,6 @@ function adaptGame(g: MarchMadnessGame): Record<string, unknown> {
   };
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
 function matchupsToSavedBracket(matchups: Matchup[], name: string): SavedBracket {
   const picks: Record<string, string> = {};
   matchups.forEach(m => {
@@ -78,145 +79,236 @@ function calculateScore(matchups: Matchup[], games: Record<string, Record<string
   return score;
 }
 
-// ─── Component ────────────────────────────────────────────────────────────────
+// ─── Styles ───────────────────────────────────────────────────────────────────
+
+const C = {
+  header: '#1a1a2e',
+  headerText: '#ffffff',
+  border: '#d0d0d0',
+  text: '#1a1a1a',
+  seed: '#666',
+};
+
+// ─── App ──────────────────────────────────────────────────────────────────────
 
 export default function App() {
+  const [view, setView] = useState<View>('landing');
   const [bracketId, setBracketId] = useState<string | null>(null);
-  const [bracketName, setBracketName] = useState('My Bracket');
+  const [viewingBracketId, setViewingBracketId] = useState<string | null>(null);
+  const [bracketName, setBracketName] = useState('');
   const [tiebreakerScore, setTiebreakerScore] = useState('');
   const [useTestData, setUseTestData] = useState(false);
   const [matchups, setMatchups] = useState<Matchup[]>(() => createInitialBracket(tournamentData));
+  const [viewMatchups, setViewMatchups] = useState<Matchup[]>(() => createInitialBracket(tournamentData));
   const [totalScore, setTotalScore] = useState(0);
   const [games, setGames] = useState<Record<string, Record<string, unknown>>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saved' | 'error'>('idle');
 
+  const locked = isLocked();
+
   // Load results from Supabase on mount
   useEffect(() => {
     async function loadResults() {
       const { data, error } = await supabase.from('results').select('*');
-      if (error) {
-        console.error('Failed to load results:', error);
-        setLoading(false);
-        return;
+      if (error) { console.error('Failed to load results:', error); }
+      else {
+        const adapted: Record<string, Record<string, unknown>> = {};
+        (data as MarchMadnessGame[]).forEach(g => { adapted[g.game_code] = adaptGame(g); });
+        setGames(adapted);
       }
-      const adapted: Record<string, Record<string, unknown>> = {};
-      (data as MarchMadnessGame[]).forEach(g => {
-        adapted[g.game_code] = adaptGame(g);
-      });
-      setGames(adapted);
       setLoading(false);
     }
     loadResults();
   }, []);
 
-  // Recalculate score whenever matchups or games change
   useEffect(() => {
     setTotalScore(calculateScore(matchups, games));
   }, [matchups, games]);
 
-  const handleUpdateBracket = (newMatchups: Matchup[]) => {
-    setMatchups(newMatchups);
+  const handleUpdateBracket = (newMatchups: Matchup[]) => setMatchups(newMatchups);
+
+  const handleNewBracket = () => {
+    setBracketId(null);
+    setMatchups(createInitialBracket(tournamentData));
+    setBracketName('');
+    setTiebreakerScore('');
+    setTotalScore(0);
+    setView('bracket');
+  };
+
+  const handleLoadBracket = async (id: string) => {
+    const { data, error } = await supabase
+      .from('brackets')
+      .select('*')
+      .eq('id', id)
+      .single();
+    if (error || !data) { alert('Failed to load bracket.'); return; }
+    const saved: SavedBracket = { name: data.name, picks: data.picks };
+    setMatchups(createInitialBracket(tournamentData, saved));
+    setBracketName(data.name);
+    setBracketId(data.id);
+    setTiebreakerScore(data.tiebreaker?.toString() ?? '');
+    setTotalScore(data.total_score);
+    setView('bracket');
+  };
+
+  const handleViewBracket = async (id: string) => {
+    const { data, error } = await supabase
+      .from('brackets')
+      .select('*')
+      .eq('id', id)
+      .single();
+    if (error || !data) { alert('Failed to load bracket.'); return; }
+    const saved: SavedBracket = { name: data.name, picks: data.picks };
+    setViewMatchups(createInitialBracket(tournamentData, saved));
+    setViewingBracketId(id);
+    setView('view-bracket');
   };
 
   const handleSaveBracket = async () => {
+    if (locked) return;
     setSaving(true);
     setSaveStatus('idle');
-
     const saved = matchupsToSavedBracket(matchups, bracketName);
     const payload = {
       name: bracketName,
       picks: saved.picks,
       tiebreaker: tiebreakerScore ? parseInt(tiebreakerScore) : null,
     };
-
     let error;
     if (bracketId) {
-      // Update existing bracket
-      ({ error } = await supabase
-        .from('brackets')
-        .update(payload)
-        .eq('id', bracketId));
+      ({ error } = await supabase.from('brackets').update(payload).eq('id', bracketId));
     } else {
-      // Insert new bracket
       const { data, error: insertError } = await supabase
-        .from('brackets')
-        .insert(payload)
-        .select('id, total_score')
-        .single();
+        .from('brackets').insert(payload).select('id, total_score').single();
       error = insertError;
-      if (data) {
-        setBracketId(data.id);
-        setTotalScore(data.total_score);
-      }
+      if (data) { setBracketId(data.id); setTotalScore(data.total_score); }
     }
-
     setSaving(false);
     setSaveStatus(error ? 'error' : 'saved');
     if (error) console.error('Save failed:', error);
-
-    // Reset status after 3s
     setTimeout(() => setSaveStatus('idle'), 3000);
-  };
-
-  const handleLoadBracket = async () => {
-    const name = prompt('Enter the bracket name to load:');
-    if (!name) return;
-
-    const { data, error } = await supabase
-      .from('brackets')
-      .select('*')
-      .ilike('name', name)
-      .order('updated_at', { ascending: false })
-      .limit(1)
-      .single();
-
-    if (error || !data) {
-      alert(`No bracket found with name "${name}"`);
-      return;
-    }
-
-    const saved: SavedBracket = { name: data.name, picks: data.picks };
-    const newMatchups = createInitialBracket(tournamentData, saved);
-    setMatchups(newMatchups);
-    setBracketName(data.name);
-    setBracketId(data.id);
-    setTiebreakerScore(data.tiebreaker?.toString() ?? '');
-    setTotalScore(data.total_score);
   };
 
   if (loading) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', fontFamily: 'system-ui' }}>
-        Loading results...
+        Loading...
       </div>
     );
   }
 
-  return (
-    <div style={{ width: '100%' }}>
-      <h1 style={{ textAlign: 'center', fontFamily: 'system-ui', margin: '16px 0', fontSize: 22 }}>
-        2026 March Madness Bracket
-      </h1>
+  // ── Nav ────────────────────────────────────────────────────────────────────
 
-      {/* Save / Load controls */}
-      <div style={{ display: 'flex', justifyContent: 'center', gap: 12, marginBottom: 12, fontFamily: 'system-ui' }}>
-        <button
-          onClick={handleSaveBracket}
-          disabled={saving}
-          style={{ padding: '6px 18px', borderRadius: 4, border: '1px solid #1a1a2e', background: '#1a1a2e', color: '#fff', cursor: saving ? 'default' : 'pointer', fontSize: 13 }}
-        >
-          {saving ? 'Saving...' : bracketId ? 'Update Bracket' : 'Save Bracket'}
-        </button>
-        <button
-          onClick={handleLoadBracket}
-          style={{ padding: '6px 18px', borderRadius: 4, border: '1px solid #1a1a2e', background: '#fff', color: '#1a1a2e', cursor: 'pointer', fontSize: 13 }}
-        >
-          Load Bracket
-        </button>
-        {saveStatus === 'saved' && <span style={{ color: '#2a7a2a', fontSize: 13, alignSelf: 'center' }}>✓ Saved</span>}
-        {saveStatus === 'error' && <span style={{ color: '#b00000', fontSize: 13, alignSelf: 'center' }}>Save failed</span>}
+  const Nav = () => (
+    <div style={{ background: C.header, color: C.headerText, display: 'flex', alignItems: 'center', padding: '0 16px', height: 48, gap: 8, fontFamily: 'system-ui', fontSize: 13 }}>
+      <span style={{ fontWeight: 700, fontSize: 15, marginRight: 16 }}>🏀 2026 Bracket Pool</span>
+      <NavBtn label='My Bracket' active={view === 'bracket'} onClick={() => view !== 'bracket' && setView('bracket')} />
+      <NavBtn label='New Bracket' active={false} onClick={handleNewBracket} />
+      <NavBtn label='Leaderboard' active={view === 'leaderboard' || view === 'view-bracket'} onClick={() => setView('leaderboard')} />
+      {locked && <span style={{ marginLeft: 'auto', fontSize: 11, opacity: 0.7 }}>🔒 Submissions closed</span>}
+    </div>
+  );
+
+  // ── Landing ────────────────────────────────────────────────────────────────
+
+  if (view === 'landing') {
+    return (
+      <div style={{ fontFamily: 'system-ui', minHeight: '100vh', background: '#f5f5f5' }}>
+        <Nav />
+        <div style={{ maxWidth: 480, margin: '80px auto', background: '#fff', borderRadius: 8, padding: 32, boxShadow: '0 2px 12px rgba(0,0,0,0.1)' }}>
+          <h2 style={{ margin: '0 0 8px', fontSize: 20, color: C.header }}>2026 March Madness Pool</h2>
+          <p style={{ margin: '0 0 24px', fontSize: 13, color: C.seed }}>
+            Deadline: {deadlineLabel}
+          </p>
+          <button
+            onClick={handleNewBracket}
+            style={{ width: '100%', padding: '10px 0', borderRadius: 5, background: C.header, color: '#fff', border: 'none', fontSize: 14, cursor: 'pointer', marginBottom: 10 }}
+          >
+            Create New Bracket
+          </button>
+          <button
+            onClick={() => setView('leaderboard')}
+            style={{ width: '100%', padding: '10px 0', borderRadius: 5, background: '#fff', color: C.header, border: `1px solid ${C.border}`, fontSize: 14, cursor: 'pointer' }}
+          >
+            View Leaderboard
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Leaderboard ────────────────────────────────────────────────────────────
+
+  if (view === 'leaderboard') {
+    return (
+      <div style={{ fontFamily: 'system-ui', minHeight: '100vh', background: '#f5f5f5' }}>
+        <Nav />
+        <div style={{ padding: '24px 16px' }}>
+          <h2 style={{ textAlign: 'center', margin: '0 0 20px', fontSize: 18, color: C.header }}>Leaderboard</h2>
+          <Leaderboard currentBracketId={bracketId} onViewBracket={handleViewBracket} />
+        </div>
+      </div>
+    );
+  }
+
+  // ── View bracket (read-only) ───────────────────────────────────────────────
+
+  if (view === 'view-bracket') {
+    return (
+      <div style={{ fontFamily: 'system-ui', minHeight: '100vh', background: '#f5f5f5' }}>
+        <Nav />
+        <div style={{ textAlign: 'center', padding: '12px 0', fontSize: 13, color: C.seed }}>
+          Viewing bracket — read only.{' '}
+          <button onClick={() => setView('leaderboard')} style={{ fontSize: 13, color: C.header, background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>
+            Back to leaderboard
+          </button>
+        </div>
+        <div style={{ width: '100%', overflowX: 'auto' }}>
+          <BracketDisplay
+            initialMatchups={viewMatchups}
+            onUpdateBracket={() => {}}
+            bracketName=''
+            onUpdateBracketName={() => {}}
+            totalScore={calculateScore(viewMatchups, games)}
+            useTestData={false}
+            onUpdateUseTestData={() => {}}
+            games={games}
+            tiebreakerScore=''
+            onUpdateTiebreakerScore={() => {}}
+            readOnly
+          />
+        </div>
+      </div>
+    );
+  }
+
+  // ── My bracket ─────────────────────────────────────────────────────────────
+
+  return (
+    <div style={{ fontFamily: 'system-ui', minHeight: '100vh', background: '#f5f5f5' }}>
+      <Nav />
+
+      {/* Save bar */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, padding: '10px 16px', background: '#fff', borderBottom: `1px solid ${C.border}` }}>
+        {locked ? (
+          <span style={{ fontSize: 13, color: C.seed }}>🔒 Bracket locked — submissions closed {deadlineLabel}</span>
+        ) : (
+          <>
+            <button
+              onClick={handleSaveBracket}
+              disabled={saving || !bracketName.trim()}
+              style={{ padding: '6px 18px', borderRadius: 4, background: C.header, color: '#fff', border: 'none', cursor: saving || !bracketName.trim() ? 'default' : 'pointer', fontSize: 13, opacity: saving || !bracketName.trim() ? 0.6 : 1 }}
+            >
+              {saving ? 'Saving...' : bracketId ? 'Update Bracket' : 'Save Bracket'}
+            </button>
+            {saveStatus === 'saved' && <span style={{ color: '#2a7a2a', fontSize: 13 }}>✓ Saved</span>}
+            {saveStatus === 'error' && <span style={{ color: '#b00000', fontSize: 13 }}>Save failed</span>}
+            {!bracketName.trim() && <span style={{ fontSize: 12, color: '#b00000' }}>Enter a bracket name to save</span>}
+          </>
+        )}
       </div>
 
       <div style={{ width: '100%', overflowX: 'auto' }}>
@@ -231,8 +323,31 @@ export default function App() {
           games={games}
           tiebreakerScore={tiebreakerScore}
           onUpdateTiebreakerScore={setTiebreakerScore}
+          readOnly={locked}
         />
       </div>
     </div>
+  );
+}
+
+// ─── NavBtn ───────────────────────────────────────────────────────────────────
+
+function NavBtn({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        background: active ? 'rgba(255,255,255,0.15)' : 'transparent',
+        color: '#fff',
+        border: 'none',
+        borderRadius: 4,
+        padding: '4px 12px',
+        fontSize: 13,
+        cursor: 'pointer',
+        fontWeight: active ? 700 : 400,
+      }}
+    >
+      {label}
+    </button>
   );
 }
