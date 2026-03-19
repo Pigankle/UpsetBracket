@@ -64,7 +64,7 @@ export const gameFlowMap: {
   E12: { nextGame: "E14", position: "bottom" },
   E13: { nextGame: "E15", position: "top" },
   E14: { nextGame: "E15", position: "bottom" },
-  E15: { nextGame: "FF2", position: "top" },
+  E15: { nextGame: "FF1", position: "top" },
 
   // West Region
   W1: { nextGame: "W9", position: "top" },
@@ -81,7 +81,7 @@ export const gameFlowMap: {
   W12: { nextGame: "W14", position: "bottom" },
   W13: { nextGame: "W15", position: "top" },
   W14: { nextGame: "W15", position: "bottom" },
-  W15: { nextGame: "FF1", position: "bottom" },
+  W15: { nextGame: "FF2", position: "top" },
 
   // South Region
   S1: { nextGame: "S9", position: "top" },
@@ -98,7 +98,7 @@ export const gameFlowMap: {
   S12: { nextGame: "S14", position: "bottom" },
   S13: { nextGame: "S15", position: "top" },
   S14: { nextGame: "S15", position: "bottom" },
-  S15: { nextGame: "FF1", position: "top" },
+  S15: { nextGame: "FF1", position: "bottom" },
 
   // Midwest Region
   M1: { nextGame: "M9", position: "top" },

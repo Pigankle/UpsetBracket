@@ -9,7 +9,7 @@ A March Madness bracket picker that helps you track your picks and see how they 
 - Visual feedback for correct/incorrect picks
 - Points tracking based on game results
 - Ability to save and load your bracket
-- Game code display toggle (S1, FF1, etc.)
+- Game code display toggle (S1, FF2, etc.)
 - Bracket name customization
 
 ## Live Demo
@@ -71,9 +71,21 @@ npm run deploy
 
 The bracket data is loaded from JSON files:
 
-- `march_madness_games.json`: Contains game results and points
-- `bracket_structure.json`: Defines the bracket structure
-- `ncaa_2025_bracket.json`: Contains the initial bracket data
+- `src/data/ncaa_2025_bracket.json`: Defines the bracket structure (teams, seeds, regions, matchups)
+- `src/data/march_madness_games.json`: Contains actual game results and points (empty when no games have been played)
+- `src/data/march_madness_games_TEST_DATA.json`: Simulated game results for testing
+
+## Updating for a New Year
+
+1. Update `src/data/ncaa_2025_bracket.json` with the new bracket (teams, seeds, regions).
+2. Update the `CHAR6` map in `generate_games.mjs` with 6-character abbreviations for any new teams.
+3. Run the generation script:
+
+```bash
+node generate_games.mjs
+```
+
+This will regenerate both `march_madness_games.json` (all games "Scheduled", no results) and `march_madness_games_TEST_DATA.json` (randomly simulated tournament where the higher seed has a 75% chance of winning each game). Upset bonus points are calculated as `base_points × seed_difference`.
 
 ## License
 

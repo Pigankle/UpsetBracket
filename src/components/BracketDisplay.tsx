@@ -1,343 +1,34 @@
-import { useState, useEffect } from "react";
-import {
-  Box,
-  Typography,
-  Button,
-  TextField,
-  FormControlLabel,
-  Checkbox,
-} from "@mui/material";
-import { styled } from "@mui/material/styles";
-import type { Team, Matchup } from "../utils/bracketTransform";
-import { gameCodeToIndex, gameFlowMap } from "../utils/bracketTransform";
-import marchMadnessGames from "../data/march_madness_games.json";
-import marchMadnessGamesTest from "../data/march_madness_games_TEST_DATA.json";
-import bracketStructure from "../data/ncaa_2025_bracket.json";
+import { useState, useEffect } from 'react';
+import type { Team, Matchup } from '../utils/bracketTransform';
+import { gameCodeToIndex, gameFlowMap } from '../utils/bracketTransform';
+import marchMadnessGames from '../data/march_madness_games.json';
+import marchMadnessGamesTest from '../data/march_madness_games_TEST_DATA.json';
 
-type Region = "East" | "West" | "South" | "Midwest";
-type Round = "Round of 64" | "Round of 32" | "Sweet 16" | "Elite Eight";
-
-interface GameResult {
-  game_code: string;
-  winner: string;
-  loser: string;
-}
-
-interface RegionResults {
-  rounds: {
-    [key in Round]: GameResult[];
-  };
-}
-
-interface FinalFourGame {
-  game_code: string;
-  winner: string;
-}
-
-interface ChampionshipGame {
-  game_code: string;
-  winner: string;
-}
-
-interface Results {
-  regions: {
-    [key in Region]: RegionResults;
-  };
-  final_four: {
-    games: FinalFourGame[];
-  };
-  championship: ChampionshipGame;
-}
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 interface MarchMadnessGame {
   GameID: number;
   Round: number;
-  "Game Number": number;
-  "Top Team": string | number;
-  "Bottom Team": string | number;
-  "Top Team Score": number;
-  "Bottom Team Score": number;
-  "Winning Team": string | number;
-  "Losing Team": string | number;
-  "Winning Team Seed": number | null;
-  "Losing Team Seed": number | null;
-  "Winning Team Score": number;
-  "Losing Team Score": number;
-  "Game Status": string;
-  "Top Team Seed": number;
-  "Bottom Team Seed": number;
-  "Game Region": string;
-  "Top Team Char6": string;
-  "Bottom Team Char6": string;
-  "Winning Team Char6": string;
-  "Losing Team Char6": string;
+  'Game Number': number;
+  'Top Team': string | number;
+  'Bottom Team': string | number;
+  'Top Team Score': number;
+  'Bottom Team Score': number;
+  'Winning Team': string | number;
+  'Losing Team': string | number;
+  'Winning Team Seed': number | null;
+  'Losing Team Seed': number | null;
+  'Winning Team Score': number;
+  'Losing Team Score': number;
+  'Game Status': string;
+  'Top Team Seed': number;
+  'Bottom Team Seed': number;
+  'Game Region': string;
+  'Top Team Char6': string;
+  'Bottom Team Char6': string;
+  'Winning Team Char6': string;
+  'Losing Team Char6': string;
   points: number;
-}
-
-interface BracketTeam {
-  seed: number;
-  name: string;
-}
-
-interface BracketGame {
-  game_code: string;
-  top: BracketTeam | string;
-  bottom: BracketTeam | string;
-}
-
-interface BracketStructure {
-  regions: {
-    [key in Region]: {
-      rounds: {
-        [key in Round]: BracketGame[];
-      };
-    };
-  };
-  final_four: {
-    games: BracketGame[];
-  };
-  championship: BracketGame;
-}
-
-const typedBracketStructure = bracketStructure as BracketStructure;
-
-interface TeamProps {
-  team: Team;
-  onClick?: () => void;
-  isStrikethrough?: boolean;
-  matchup?: Matchup;
-  gameCode: string;
-  round: number;
-  position: "top" | "bottom";
-  marchMadnessGames: Record<string, MarchMadnessGame>;
-}
-
-const TeamSlot = styled(Box)(({ theme }) => ({
-  display: "flex",
-  alignItems: "center",
-  padding: "2px 6px",
-  width: "180px",
-  height: "28px",
-  border: `1px solid ${theme.palette.divider}`,
-  cursor: "pointer",
-  "&:hover": {
-    backgroundColor: theme.palette.action.hover,
-  },
-}));
-
-const MatchupContainer = styled(Box)({
-  display: "flex",
-  flexDirection: "column",
-  position: "relative",
-  margin: "4px 0",
-});
-
-interface GameCodeLabelProps {
-  showGameCode: boolean;
-}
-
-const GameCodeLabel = styled(Typography, {
-  shouldForwardProp: (prop) => prop !== "showGameCode",
-})<GameCodeLabelProps>(({ theme, showGameCode }) => ({
-  position: "absolute",
-  left: "-24px",
-  top: "50%",
-  transform: "translateY(-50%)",
-  fontSize: "0.75rem",
-  color: showGameCode ? theme.palette.text.secondary : "white",
-  fontWeight: "bold",
-}));
-
-const MatchupConnector = styled(Box)<{ gameCode?: string }>(({ gameCode }) => ({
-  position: "absolute",
-  ...(gameCode?.startsWith("E") ||
-  gameCode?.startsWith("M") ||
-  gameCode === "FF2"
-    ? { left: "-24px" }
-    : { right: "-0px" }),
-  width: "24px",
-  borderTop: "2px solid #ccc",
-  zIndex: 0,
-}));
-
-const Round = styled(Box)({
-  display: "flex",
-  flexDirection: "column",
-  minWidth: "220px",
-  margin: "0 8px",
-  justifyContent: "space-around",
-});
-
-const Region = styled(Box)({
-  display: "flex",
-  flexDirection: "column",
-  flex: 1,
-});
-
-const FirstRoundMatchup = styled(MatchupContainer)({
-  marginBottom: "32px",
-  "&:last-child": {
-    marginBottom: 0,
-  },
-});
-
-const PointsLabel = styled(Typography)(({ theme }) => ({
-  position: "absolute",
-  right: "-40px",
-  top: "50%",
-  transform: "translateY(-50%)",
-  fontSize: "0.75rem",
-  color: theme.palette.success.main,
-  fontWeight: "bold",
-}));
-
-const regionCodeToName: Record<string, Region> = {
-  E: "East",
-  W: "West",
-  S: "South",
-  M: "Midwest",
-};
-
-function Team({
-  team,
-  onClick,
-  isStrikethrough,
-  gameCode,
-  round,
-  matchup,
-  position,
-  marchMadnessGames,
-}: TeamProps) {
-  const gameResult = marchMadnessGames[gameCode];
-  if (!gameResult) {
-    console.log(`No game result found for ${gameCode}`);
-    return null;
-  }
-
-  const actualTopTeam = gameResult["Top Team"] as string;
-  const actualBottomTeam = gameResult["Bottom Team"] as string;
-  const actualTopSeed = gameResult["Top Team Seed"] as number;
-  const actualBottomSeed = gameResult["Bottom Team Seed"] as number;
-
-  // Skip highlighting if both teams are null (future games)
-  if (actualTopTeam === null && actualBottomTeam === null) {
-    return (
-      <TeamSlot
-        onClick={onClick}
-        sx={{
-          bgcolor: "background.paper",
-          position: "relative",
-        }}
-      >
-        <Typography
-          variant="body2"
-          sx={{
-            color: "text.primary",
-            fontWeight: matchup?.winner === position ? "bold" : "normal",
-          }}
-        >
-          {team.seed} {team.name}
-        </Typography>
-      </TeamSlot>
-    );
-  }
-
-  // For Round of 64 (round 0), just show the team without any highlighting
-  if (round === 0) {
-    return (
-      <TeamSlot
-        onClick={onClick}
-        sx={{
-          bgcolor: "background.paper",
-          position: "relative",
-        }}
-      >
-        <Typography
-          variant="body2"
-          sx={{
-            color: "text.primary",
-            fontWeight: matchup?.winner === position ? "bold" : "normal",
-          }}
-        >
-          {team.seed} {team.name}
-          {gameResult["Winning Team"] === team.name && " ✓"}
-        </Typography>
-      </TeamSlot>
-    );
-  }
-
-  // For Round of 32 and beyond, compare picked teams with actual teams
-  const isActualTeam =
-    position === "top"
-      ? actualTopTeam === team.name
-      : actualBottomTeam === team.name;
-
-  // A team is incorrect if it's picked but doesn't match the actual team in that position
-  const isIncorrect =
-    team.name !== (position === "top" ? actualTopTeam : actualBottomTeam);
-
-  const correctTeam = position === "top" ? actualTopTeam : actualBottomTeam;
-  const correctSeed = position === "top" ? actualTopSeed : actualBottomSeed;
-
-  // Debug log to check values
-  /*  console.log(`Game ${gameCode}, Round ${round}:`, {
-    team: team.name,
-    position,
-    actualTopTeam,
-    actualBottomTeam,
-    isActualTeam,
-    isIncorrect,
-    correctTeam,
-    correctSeed,
-    gameResult,
-  }); */
-
-  return (
-    <Box sx={{ position: "relative" }}>
-      {isIncorrect && (
-        <Typography
-          variant="body2"
-          sx={{
-            position: "absolute",
-            left: 0,
-            right: 0,
-            [position === "top" ? "bottom" : "top"]: "100%",
-            color: "error.main",
-            mb: position === "top" ? 0.5 : 0,
-            mt: position === "bottom" ? 0.5 : 0,
-            textAlign: "center",
-            fontSize: "0.75rem",
-          }}
-        >
-          {correctSeed} {correctTeam}
-          {gameResult["Winning Team"] === correctTeam && " ✓"}
-        </Typography>
-      )}
-      <TeamSlot
-        onClick={onClick}
-        sx={{
-          bgcolor: isActualTeam
-            ? "rgba(76, 175, 80, 0.15)"
-            : isIncorrect
-            ? "rgba(244, 67, 54, 0.15)"
-            : "background.paper",
-          textDecoration: isIncorrect ? "line-through" : "none",
-          position: "relative",
-        }}
-      >
-        <Typography
-          variant="body2"
-          sx={{
-            color: isIncorrect ? "error.main" : "text.primary",
-            fontWeight: matchup?.winner === position ? "bold" : "normal",
-          }}
-        >
-          {team.seed} {team.name}
-          {gameResult["Winning Team"] === team.name && " ✓"}
-        </Typography>
-      </TeamSlot>
-    </Box>
-  );
 }
 
 interface BracketDisplayProps {
@@ -350,6 +41,593 @@ interface BracketDisplayProps {
   onUpdateUseTestData: (useTestData: boolean) => void;
 }
 
+// ─── Layout constants ─────────────────────────────────────────────────────────
+
+// Height of one matchup card (two team rows + divider)
+const CARD_H = 56;
+// Vertical gap between cards within a round
+const CARD_GAP = 8;
+// Width of each round column
+const ROUND_W = 160;
+// Horizontal gap between round columns
+const ROUND_GAP = 12;
+// Width of the connector SVG strip between adjacent round columns
+const CONNECTOR_W = 24;
+
+// Total vertical space one card occupies (card + gap below it)
+const SLOT = CARD_H + CARD_GAP;
+
+// For a given round index (0=R64, 1=R32, 2=S16, 3=E8) return how many cards
+// are in that round and the vertical stride between card centers.
+const roundLayout = (roundIdx: number) => {
+  const count = 8 >> roundIdx; // 8,4,2,1
+  // Cards in later rounds are spaced to align with the midpoint of their
+  // two feeder cards from the previous round.
+  const stride = SLOT * (1 << roundIdx); // 1x, 2x, 4x, 8x SLOT
+  return { count, stride };
+};
+
+// Top offset (px) of card [i] in round [r], within a region column.
+// Cards are centred within their stride bucket.
+const cardTop = (roundIdx: number, cardIdx: number) => {
+  const { stride } = roundLayout(roundIdx);
+  // bucket start + centre within bucket
+  return cardIdx * stride + (stride - CARD_H) / 2;
+};
+
+// Total height of a region column (driven by round 0: 8 cards)
+const REGION_H = 8 * SLOT - CARD_GAP; // remove trailing gap
+
+// ─── Colours / styles ─────────────────────────────────────────────────────────
+
+const C = {
+  bg: '#f5f5f5',
+  cardBg: '#ffffff',
+  cardBorder: '#d0d0d0',
+  divider: '#e0e0e0',
+  text: '#1a1a1a',
+  seed: '#666666',
+  correct: 'rgba(34,139,34,0.12)',
+  incorrect: 'rgba(200,0,0,0.10)',
+  correctText: '#1a6e1a',
+  incorrectText: '#b00000',
+  winnerBold: 700,
+  connectorLine: '#b0b0b0',
+  points: '#2a7a2a',
+  pointsNeg: '#b00000',
+  header: '#1a1a2e',
+  headerText: '#ffffff',
+  roundLabel: '#888888',
+};
+
+// ─── TeamRow ──────────────────────────────────────────────────────────────────
+
+interface TeamRowProps {
+  team: Team;
+  position: 'top' | 'bottom';
+  isWinner: boolean;
+  gameCode: string;
+  round: number;
+  games: Record<string, MarchMadnessGame>;
+  onClick: () => void;
+}
+
+function TeamRow({ team, position, isWinner, gameCode, round, games, onClick }: TeamRowProps) {
+  const result = games[gameCode];
+  const isTbd = team.name === 'TBD';
+
+  let bg = 'transparent';
+  let textColor = C.text;
+  let strike = false;
+  let checkmark = '';
+
+  if (result && !isTbd) {
+    const actualName = position === 'top' ? result['Top Team'] : result['Bottom Team'];
+    const winnerName = result['Winning Team'];
+    const bothNull = result['Top Team'] === null && result['Bottom Team'] === null;
+
+    if (!bothNull && round > 0) {
+      if (team.name === actualName) {
+        bg = C.correct;
+        textColor = C.correctText;
+      } else if (actualName !== null) {
+        bg = C.incorrect;
+        textColor = C.incorrectText;
+        strike = true;
+      }
+    }
+    if (winnerName === team.name) checkmark = ' ✓';
+  }
+
+  return (
+    <div
+      onClick={onClick}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 6,
+        padding: '0 8px',
+        height: 26,
+        background: bg,
+        cursor: isTbd ? 'default' : 'pointer',
+        userSelect: 'none',
+      }}
+    >
+      <span style={{ fontSize: 10, color: C.seed, minWidth: 14, textAlign: 'right', flexShrink: 0 }}>
+        {isTbd ? '' : team.seed}
+      </span>
+      <span
+        style={{
+          fontSize: 12,
+          color: textColor,
+          fontWeight: isWinner ? C.winnerBold : 400,
+          textDecoration: strike ? 'line-through' : 'none',
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+        }}
+      >
+        {team.name}{checkmark}
+      </span>
+    </div>
+  );
+}
+
+// ─── MatchupCard ──────────────────────────────────────────────────────────────
+
+interface MatchupCardProps {
+  matchup: Matchup;
+  top: number;
+  round: number;
+  games: Record<string, MarchMadnessGame>;
+  onPick: (code: string, pos: 'top' | 'bottom') => void;
+  showGameCode: boolean;
+}
+
+function MatchupCard({ matchup, top, round, games, onPick, showGameCode }: MatchupCardProps) {
+  const result = games[matchup.gameCode];
+  let pts: number | null = null;
+  if (matchup.winner && result) {
+    const w = matchup.winner === 'top' ? matchup.topTeam : matchup.bottomTeam;
+    if (result['Winning Team'] === w.name) pts = result.points ?? 0;
+    else pts = 0;
+  }
+
+  const PTS_H = pts !== null ? 16 : 0;
+
+  return (
+    <div style={{ position: 'absolute', top, left: 0, width: ROUND_W }}>
+      {pts !== null && (
+        <div style={{
+          height: PTS_H,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'flex-end',
+          paddingRight: 4,
+          fontSize: 10,
+          fontWeight: 700,
+          color: pts > 0 ? C.points : C.pointsNeg,
+        }}>
+          +{pts}
+        </div>
+      )}
+      <div style={{
+        width: ROUND_W,
+        height: CARD_H,
+        background: C.cardBg,
+        border: `1px solid ${C.cardBorder}`,
+        borderRadius: 6,
+        overflow: 'hidden',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+        display: 'flex',
+        flexDirection: 'column',
+      }}>
+        {showGameCode && (
+          <div style={{ fontSize: 9, color: C.seed, textAlign: 'center', lineHeight: '14px', borderBottom: `1px solid ${C.divider}`, background: '#fafafa' }}>
+            {matchup.gameCode}
+          </div>
+        )}
+        <TeamRow
+          team={matchup.topTeam}
+          position='top'
+          isWinner={matchup.winner === 'top'}
+          gameCode={matchup.gameCode}
+          round={round}
+          games={games}
+          onClick={() => onPick(matchup.gameCode, 'top')}
+        />
+        <div style={{ height: 1, background: C.divider, flexShrink: 0 }} />
+        <TeamRow
+          team={matchup.bottomTeam}
+          position='bottom'
+          isWinner={matchup.winner === 'bottom'}
+          gameCode={matchup.gameCode}
+          round={round}
+          games={games}
+          onClick={() => onPick(matchup.gameCode, 'bottom')}
+        />
+      </div>
+    </div>
+  );
+}
+
+// ─── ConnectorSVG ─────────────────────────────────────────────────────────────
+// Draws the bracket lines between round [r] and round [r+1].
+// dir: 'ltr' = lines exit right of card (left-side regions)
+//      'rtl' = lines exit left of card (right-side regions, mirrored)
+
+interface ConnectorSVGProps {
+  fromRound: number; // 0-2
+  dir: 'ltr' | 'rtl';
+}
+
+function ConnectorSVG({ fromRound, dir }: ConnectorSVGProps) {
+  const { count: fromCount } = roundLayout(fromRound);
+  const toRound = fromRound + 1;
+
+  const lines: React.ReactNode[] = [];
+  const w = CONNECTOR_W;
+
+  for (let i = 0; i < fromCount; i += 2) {
+    // Centers of the two source cards
+    const y1 = cardTop(fromRound, i) + CARD_H / 2;
+    const y2 = cardTop(fromRound, i + 1) + CARD_H / 2;
+    // Center of the destination card
+    const yMid = cardTop(toRound, i / 2) + CARD_H / 2;
+
+    if (dir === 'ltr') {
+      // horizontal stubs from left, vertical join, stub to right
+      lines.push(
+        <g key={i}>
+          <line x1={0} y1={y1} x2={w / 2} y2={y1} stroke={C.connectorLine} strokeWidth={1.5} />
+          <line x1={0} y1={y2} x2={w / 2} y2={y2} stroke={C.connectorLine} strokeWidth={1.5} />
+          <line x1={w / 2} y1={y1} x2={w / 2} y2={y2} stroke={C.connectorLine} strokeWidth={1.5} />
+          <line x1={w / 2} y1={yMid} x2={w} y2={yMid} stroke={C.connectorLine} strokeWidth={1.5} />
+        </g>
+      );
+    } else {
+      // rtl: stubs from right, vertical join, stub to left
+      lines.push(
+        <g key={i}>
+          <line x1={w} y1={y1} x2={w / 2} y2={y1} stroke={C.connectorLine} strokeWidth={1.5} />
+          <line x1={w} y1={y2} x2={w / 2} y2={y2} stroke={C.connectorLine} strokeWidth={1.5} />
+          <line x1={w / 2} y1={y1} x2={w / 2} y2={y2} stroke={C.connectorLine} strokeWidth={1.5} />
+          <line x1={w / 2} y1={yMid} x2={0} y2={yMid} stroke={C.connectorLine} strokeWidth={1.5} />
+        </g>
+      );
+    }
+  }
+
+  return (
+    <svg
+      width={w}
+      height={REGION_H}
+      style={{ flexShrink: 0, display: 'block', overflow: 'visible' }}
+    >
+      {lines}
+    </svg>
+  );
+}
+
+// ─── RoundColumn ──────────────────────────────────────────────────────────────
+
+interface RoundColumnProps {
+  matchups: Matchup[];
+  roundIdx: number;
+  label: string;
+  games: Record<string, MarchMadnessGame>;
+  onPick: (code: string, pos: 'top' | 'bottom') => void;
+  showGameCode: boolean;
+}
+
+function RoundColumn({ matchups, roundIdx, label, games, onPick, showGameCode }: RoundColumnProps) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0 }}>
+      <div style={{ fontSize: 10, color: C.roundLabel, marginBottom: 4, whiteSpace: 'nowrap', fontWeight: 600, letterSpacing: '0.03em' }}>
+        {label}
+      </div>
+      <div style={{ position: 'relative', width: ROUND_W, height: REGION_H }}>
+        {matchups.map((m, i) => (
+          <MatchupCard
+            key={m.gameCode}
+            matchup={m}
+            top={cardTop(roundIdx, i)}
+            round={roundIdx}
+            games={games}
+            onPick={onPick}
+            showGameCode={showGameCode}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── Region ───────────────────────────────────────────────────────────────────
+
+const ROUND_LABELS = ['Round of 64', 'Round of 32', 'Sweet 16', 'Elite Eight'];
+
+interface RegionProps {
+  name: string;
+  matchups: Matchup[];
+  games: Record<string, MarchMadnessGame>;
+  onPick: (code: string, pos: 'top' | 'bottom') => void;
+  dir: 'ltr' | 'rtl';
+  showGameCode: boolean;
+}
+
+function Region({ name, matchups, games, onPick, dir, showGameCode }: RegionProps) {
+  const rounds = [
+    matchups.slice(0, 8),
+    matchups.slice(8, 12),
+    matchups.slice(12, 14),
+    matchups.slice(14, 15),
+  ];
+
+  const columns = ROUND_LABELS.map((label, i) => (
+    <RoundColumn
+      key={i}
+      matchups={rounds[i]}
+      roundIdx={i}
+      label={label}
+      games={games}
+      onPick={onPick}
+      showGameCode={showGameCode}
+    />
+  ));
+
+  // Insert connector SVGs between round columns
+
+  const children: React.ReactNode[] = [];
+  if (dir === 'ltr') {
+    columns.forEach((col, i) => {
+      children.push(col);
+      if (i < 3) children.push(
+        <div key={`c${i}`} style={{ display: 'flex', alignItems: 'flex-start', paddingTop: 18 }}>
+          <ConnectorSVG fromRound={i} dir='ltr' />
+        </div>
+      );
+    });
+  } else {
+    // RTL: columns are rendered E8→S16→R32→R64 (reversed)
+    // Connector between col i and col i+1 joins logical rounds (3-i-1) and (3-i)
+    const reversedCols = [...columns].reverse();
+    reversedCols.forEach((col, i) => {
+      children.push(col);
+      if (i < 3) {
+        // logical fromRound: col i is round (3-i), next col is round (3-i-1)
+        // connector draws lines from round (3-i-1) cards merging into round (3-i)
+        const logicalFromRound = 3 - i - 1; // 2, 1, 0
+        children.push(
+          <div key={`c${i}`} style={{ display: 'flex', alignItems: 'flex-start', paddingTop: 18 }}>
+            <ConnectorSVG fromRound={logicalFromRound} dir='rtl' />
+          </div>
+        );
+      }
+    });
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: dir === 'ltr' ? 'flex-start' : 'flex-end' }}>
+      <div style={{
+        fontSize: 11,
+        fontWeight: 700,
+        color: C.headerText,
+        background: C.header,
+        padding: '3px 10px',
+        borderRadius: 4,
+        marginBottom: 8,
+        letterSpacing: '0.05em',
+        alignSelf: 'stretch',
+        textAlign: 'center',
+      }}>
+        {name.toUpperCase()}
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'flex-start' }}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+// ─── FinalFourCenter ──────────────────────────────────────────────────────────
+
+interface FinalFourCenterProps {
+  matchups: Matchup[]; // [FF1(idx60), FF2(idx61), CH1(idx62)]  — see note below
+  games: Record<string, MarchMadnessGame>;
+  onPick: (code: string, pos: 'top' | 'bottom') => void;
+  bracketName: string;
+  onUpdateBracketName: (n: string) => void;
+  totalScore: number;
+  useTestData: boolean;
+  tiebreakerScore: string;
+  onUpdateTiebreakerScore: (s: string) => void;
+}
+
+// Compact single-game card (used in Final Four column)
+function FinalCard({
+  matchup,
+  round,
+  games,
+  onPick,
+}: {
+  matchup: Matchup;
+  round: number;
+  games: Record<string, MarchMadnessGame>;
+  onPick: (code: string, pos: 'top' | 'bottom') => void;
+}) {
+  const result = games[matchup.gameCode];
+  let pts: number | null = null;
+  if (matchup.winner && result) {
+    const w = matchup.winner === 'top' ? matchup.topTeam : matchup.bottomTeam;
+    pts = result['Winning Team'] === w.name ? (result.points ?? 0) : 0;
+  }
+
+  return (
+    <div style={{
+      width: ROUND_W,
+      height: CARD_H,
+      background: C.cardBg,
+      border: `1px solid ${C.cardBorder}`,
+      borderRadius: 6,
+      overflow: 'hidden',
+      boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+      display: 'flex',
+      flexDirection: 'column',
+      position: 'relative',
+      flexShrink: 0,
+    }}>
+      <TeamRow team={matchup.topTeam} position='top' isWinner={matchup.winner === 'top'} gameCode={matchup.gameCode} round={round} games={games} onClick={() => onPick(matchup.gameCode, 'top')} />
+      <div style={{ height: 1, background: C.divider }} />
+      <TeamRow team={matchup.bottomTeam} position='bottom' isWinner={matchup.winner === 'bottom'} gameCode={matchup.gameCode} round={round} games={games} onClick={() => onPick(matchup.gameCode, 'bottom')} />
+      {pts !== null && (
+        <div style={{ position: 'absolute', right: 4, bottom: 2, fontSize: 10, fontWeight: 700, color: pts > 0 ? C.points : C.pointsNeg }}>
+          +{pts}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function FinalFourCenter({ matchups, games, onPick, bracketName, onUpdateBracketName, totalScore, useTestData, tiebreakerScore, onUpdateTiebreakerScore }: FinalFourCenterProps) {
+  // matchups order from caller: [FF1=idx60, FF2=idx61, CH=idx62]
+  const [ff1, ff2, ch] = matchups;
+
+  // Connector from left Elite Eight into FF semifinal
+  const ffCardTop = (REGION_H - CARD_H * 3 - 16) / 2;
+
+  return (
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      minWidth: 280,
+      padding: '0 8px',
+      gap: 0,
+    }}>
+      {/* Bracket name input */}
+      <input
+        value={bracketName}
+        onChange={e => onUpdateBracketName(e.target.value)}
+        placeholder='Bracket name'
+        style={{
+          border: `1px solid ${C.cardBorder}`,
+          borderRadius: 4,
+          padding: '4px 8px',
+          fontSize: 12,
+          marginBottom: 12,
+          width: '100%',
+          boxSizing: 'border-box',
+          outline: 'none',
+          color: C.text,
+          background: '#fff',
+        }}
+      />
+
+      <div style={{ fontSize: 11, fontWeight: 700, color: C.headerText, background: C.header, padding: '3px 10px', borderRadius: 4, marginBottom: 10, letterSpacing: '0.05em', width: '100%', textAlign: 'center', boxSizing: 'border-box' }}>
+        FINAL FOUR
+      </div>
+
+      {/* Two semifinal games */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 16, width: '100%', alignItems: 'center' }}>
+        <div>
+          <div style={{ fontSize: 9, color: C.roundLabel, textAlign: 'center', marginBottom: 4 }}>{ff1.gameCode}</div>
+          <FinalCard matchup={ff1} round={3} games={games} onPick={onPick} />
+        </div>
+        <div>
+          <div style={{ fontSize: 9, color: C.roundLabel, textAlign: 'center', marginBottom: 4 }}>{ff2.gameCode}</div>
+          <FinalCard matchup={ff2} round={3} games={games} onPick={onPick} />
+        </div>
+      </div>
+
+      <div style={{ fontSize: 11, fontWeight: 700, color: C.headerText, background: C.header, padding: '3px 10px', borderRadius: 4, marginBottom: 10, letterSpacing: '0.05em', width: '100%', textAlign: 'center', boxSizing: 'border-box' }}>
+        CHAMPIONSHIP
+      </div>
+
+      <FinalCard matchup={ch} round={4} games={games} onPick={onPick} />
+
+      {ch.winner && (
+        <div style={{ marginTop: 10, textAlign: 'center' }}>
+          <div style={{ fontSize: 10, color: C.roundLabel }}>🏆 Champion</div>
+          <div style={{ fontSize: 14, fontWeight: 700, color: C.text }}>
+            {(ch.winner === 'top' ? ch.topTeam : ch.bottomTeam).name}
+          </div>
+        </div>
+      )}
+
+      {/* Tiebreaker */}
+      <div style={{ marginTop: 12, width: '100%', borderTop: `1px solid ${C.divider}`, paddingTop: 10 }}>
+        <div style={{ fontSize: 11, fontWeight: 700, color: C.text, marginBottom: 6 }}>Tiebreaker</div>
+        <div style={{ fontSize: 10, color: C.seed, marginBottom: 6 }}>Predicted final game total score</div>
+        <input
+          type='number'
+          min={0}
+          value={tiebreakerScore}
+          onChange={e => onUpdateTiebreakerScore(e.target.value)}
+          placeholder='e.g. 145'
+          style={{
+            border: `1px solid ${C.cardBorder}`,
+            borderRadius: 4,
+            padding: '4px 8px',
+            fontSize: 12,
+            width: '100%',
+            boxSizing: 'border-box',
+            outline: 'none',
+            color: C.text,
+            background: '#fff',
+          }}
+        />
+      </div>
+
+      {/* Score summary */}
+      <div style={{ marginTop: 16, width: '100%', fontSize: 11, color: C.text, borderTop: `1px solid ${C.divider}`, paddingTop: 10 }}>
+        <div style={{ fontWeight: 700, marginBottom: 6 }}>Scores by Round</div>
+        {useTestData && (
+          <div style={{ color: C.incorrectText, fontWeight: 700, fontSize: 10, marginBottom: 6 }}>⚠ SCORING BASED ON TEST DATA</div>
+        )}
+        <div style={{ fontSize: 11, fontWeight: 700, color: C.points, marginTop: 6 }}>
+          Total: {totalScore} pts
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Scoring helpers ──────────────────────────────────────────────────────────
+
+function calcRoundScores(matchups: Matchup[], games: Record<string, MarchMadnessGame>) {
+  const names = ['Round of 64', 'Round of 32', 'Sweet 16', 'Elite Eight', 'Final Four', 'Championship'];
+  const scores = Array(6).fill(0);
+
+  const r64 = new Set([...range(0,8), ...range(15,23), ...range(30,38), ...range(45,53)]);
+  const r32 = new Set([...range(8,12), ...range(23,27), ...range(38,42), ...range(53,57)]);
+  const s16 = new Set([12,13,27,28,42,43,57,58]);
+  const e8  = new Set([14,29,44,59]);
+
+  matchups.forEach((m, idx) => {
+    if (!m.winner) return;
+    const w = m.winner === 'top' ? m.topTeam : m.bottomTeam;
+    const g = games[m.gameCode];
+    if (!g || g['Winning Team'] !== w.name) return;
+    const pts = g.points ?? 0;
+    if (r64.has(idx)) scores[0] += pts;
+    else if (r32.has(idx)) scores[1] += pts;
+    else if (s16.has(idx)) scores[2] += pts;
+    else if (e8.has(idx)) scores[3] += pts;
+    else if (idx === 60 || idx === 61) scores[4] += pts;
+    else if (idx === 62) scores[5] += pts;
+  });
+
+  return names.map((n, i) => ({ name: n, score: scores[i] }));
+}
+
+function range(a: number, b: number) {
+  return Array.from({ length: b - a }, (_, i) => i + a);
+}
+
+// ─── Main component ───────────────────────────────────────────────────────────
+
 export default function BracketDisplay({
   initialMatchups,
   onUpdateBracket,
@@ -361,558 +639,120 @@ export default function BracketDisplay({
 }: BracketDisplayProps) {
   const [matchups, setMatchups] = useState<Matchup[]>(initialMatchups);
   const [showGameCode, setShowGameCode] = useState(false);
+  const [tiebreakerScore, setTiebreakerScore] = useState('');
 
-  useEffect(() => {
-    setMatchups(initialMatchups);
-  }, [initialMatchups]);
+  useEffect(() => { setMatchups(initialMatchups); }, [initialMatchups]);
+  useEffect(() => { onUpdateBracket([...matchups]); }, [useTestData]);
 
-  useEffect(() => {
-    // Recalculate points when useTestData changes
-    onUpdateBracket([...matchups]);
-  }, [useTestData]);
-
-  const typedMarchMadnessGames = useTestData
+  const games = useTestData
     ? (marchMadnessGamesTest as unknown as Record<string, MarchMadnessGame>)
     : (marchMadnessGames as unknown as Record<string, MarchMadnessGame>);
 
-  const handleTeamClick = (gameCode: string, position: "top" | "bottom") => {
+  const handlePick = (gameCode: string, position: 'top' | 'bottom') => {
     const matchupIndex = gameCodeToIndex[gameCode];
     if (matchupIndex === undefined) return;
 
-    const newMatchups = [...matchups];
-    const currentMatchup = newMatchups[matchupIndex];
-    const selectedTeam =
-      position === "top" ? currentMatchup.topTeam : currentMatchup.bottomTeam;
+    const next = [...matchups];
+    const cur = next[matchupIndex];
+    const selected = position === 'top' ? cur.topTeam : cur.bottomTeam;
+    if (selected.name === 'TBD') return;
 
-    // Only allow clicking if the selected team is not "TBD"
-    if (selectedTeam.name === "TBD") {
-      return;
-    }
+    cur.winner = position;
 
-    // Update current matchup
-    currentMatchup.winner = position;
+    const clearPath = (code: string) => {
+      const info = gameFlowMap[code];
+      if (!info) return;
+      const ni = gameCodeToIndex[info.nextGame];
+      const nm = next[ni];
+      const pos = info.position;
+      const isOrigin = code === gameCode;
 
-    // Track the path of teams that need to be cleared
-    const clearPath = (gameCode: string, position: "top" | "bottom") => {
-      const matchupIndex = gameCodeToIndex[gameCode];
-      const matchup = newMatchups[matchupIndex];
-
-      // Get the next game info from gameFlowMap
-      const nextInfo = gameFlowMap[gameCode];
-      if (!nextInfo) {
-        return;
-      }
-
-      const nextMatchupIndex = gameCodeToIndex[nextInfo.nextGame];
-      const nextMatchup = newMatchups[nextMatchupIndex];
-      const nextPosition = nextInfo.position;
-
-      // Update the team in the next matchup
-      if (matchup === currentMatchup) {
-        // If this is the original clicked matchup, propagate the selected team
-        if (nextPosition === "top") {
-          nextMatchup.topTeam = selectedTeam;
-        } else {
-          nextMatchup.bottomTeam = selectedTeam;
-        }
+      if (isOrigin) {
+        if (pos === 'top') nm.topTeam = selected;
+        else nm.bottomTeam = selected;
       } else {
-        // For subsequent matchups, clear the appropriate team
-        if (nextPosition === "top") {
-          // If this team was picked as winner, clear it and continue clearing
-          if (nextMatchup.winner === "top") {
-            nextMatchup.winner = undefined;
-            nextMatchup.topTeam = { name: "TBD", seed: "0" };
-            clearPath(nextInfo.nextGame, "top");
-          } else {
-            // Just clear the team but preserve the winner if it was the other team
-            nextMatchup.topTeam = { name: "TBD", seed: "0" };
-          }
+        if (pos === 'top') {
+          if (nm.winner === 'top') { nm.winner = undefined; nm.topTeam = { name: 'TBD', seed: '0' }; clearPath(info.nextGame); }
+          else nm.topTeam = { name: 'TBD', seed: '0' };
         } else {
-          // If this team was picked as winner, clear it and continue clearing
-          if (nextMatchup.winner === "bottom") {
-            nextMatchup.winner = undefined;
-            nextMatchup.bottomTeam = { name: "TBD", seed: "0" };
-            clearPath(nextInfo.nextGame, "bottom");
-          } else {
-            // Just clear the team but preserve the winner if it was the other team
-            nextMatchup.bottomTeam = { name: "TBD", seed: "0" };
-          }
+          if (nm.winner === 'bottom') { nm.winner = undefined; nm.bottomTeam = { name: 'TBD', seed: '0' }; clearPath(info.nextGame); }
+          else nm.bottomTeam = { name: 'TBD', seed: '0' };
         }
       }
     };
 
-    // Start clearing the path from the current matchup
-    clearPath(gameCode, position);
-
-    setMatchups(newMatchups);
-    onUpdateBracket(newMatchups);
+    clearPath(gameCode);
+    setMatchups(next);
+    onUpdateBracket(next);
   };
 
-  const getRegionMatchups = (start: number, count: number) => {
-    return matchups.slice(start, start + count);
-  };
+  // Region matchup slices (15 each: 8+4+2+1)
+  // Order in flat array: East(0-14), West(15-29), South(30-44), Midwest(45-59)
+  const east    = matchups.slice(0, 15);
+  const west    = matchups.slice(15, 30);
+  const south   = matchups.slice(30, 45);
+  const midwest = matchups.slice(45, 60);
+  // Look up FF/CH by gameCode to be immune to index ordering bugs
+  const ff1 = matchups.find(m => m.gameCode === 'FF1')!;
+  const ff2 = matchups.find(m => m.gameCode === 'FF2')!;
+  const ch1 = matchups.find(m => m.gameCode === 'CH1')!;
+  const ffMid = [ff1, ff2, ch1];
 
-  const renderMatchup = (
-    matchup: Matchup,
-    index: number,
-    isFirstRound: boolean = false,
-    round: number = 0
-  ) => {
-    const topTeamWon = matchup.winner === "top";
-    const bottomTeamWon = matchup.winner === "bottom";
-    const MatchupWrapper = isFirstRound ? FirstRoundMatchup : MatchupContainer;
-
-    // Calculate points for correct picks
-    let points = 0;
-    if (matchup.winner) {
-      const winner =
-        matchup.winner === "top" ? matchup.topTeam : matchup.bottomTeam;
-      const loser =
-        matchup.winner === "top" ? matchup.bottomTeam : matchup.topTeam;
-
-      // Get the game result from march_madness_games.json
-      const gameResult = typedMarchMadnessGames[matchup.gameCode];
-      if (gameResult && gameResult["Winning Team"] === winner.name) {
-        points = gameResult.points;
-      }
-    }
-
-    // Debug log to check round numbers
-    //  console.log(`Rendering matchup ${matchup.gameCode} in round ${round}`);
-
-    return (
-      <MatchupWrapper key={matchup.gameCode}>
-        <GameCodeLabel showGameCode={showGameCode}>
-          {matchup.gameCode}
-        </GameCodeLabel>
-        <Team
-          team={matchup.topTeam}
-          isStrikethrough={bottomTeamWon}
-          onClick={() => handleTeamClick(matchup.gameCode, "top")}
-          gameCode={matchup.gameCode}
-          round={round}
-          matchup={matchup}
-          position="top"
-          marchMadnessGames={typedMarchMadnessGames}
-        />
-        <Team
-          team={matchup.bottomTeam}
-          isStrikethrough={topTeamWon}
-          onClick={() => handleTeamClick(matchup.gameCode, "bottom")}
-          gameCode={matchup.gameCode}
-          round={round}
-          matchup={matchup}
-          position="bottom"
-          marchMadnessGames={typedMarchMadnessGames}
-        />
-        {gameFlowMap[matchup.gameCode] && (
-          <MatchupConnector
-            gameCode={matchup.gameCode}
-            sx={{
-              top: gameFlowMap[matchup.gameCode].position === "top" ? "50%" : undefined,
-              bottom: gameFlowMap[matchup.gameCode].position === "bottom" ? "50%" : undefined,
-            }}
-          />
-        )}
-
-        {points !== undefined && (
-          <PointsLabel
-            sx={{
-              position: "absolute",
-              ...(matchup.gameCode.startsWith("F") ||
-              matchup.gameCode.startsWith("C")
-                ? {
-                    color: "white",
-                    zIndex: -1,
-                  }
-                : {
-                    color: points === 0 ? "error.main" : "success.main",
-                    ...(matchup.gameCode.startsWith("E") ||
-                    matchup.gameCode.startsWith("M")
-                      ? { left: "-30px" }
-                      : { right: "-10px" }),
-                    backgroundColor: "white",
-                    padding: "0 2px",
-                    borderRadius: "2px",
-                    zIndex: 1,
-                    width: "fit-content",
-                  }),
-              top: "50%",
-              transform: "translateY(-50%)",
-            }}
-          >
-            +{points}
-          </PointsLabel>
-        )}
-      </MatchupWrapper> //This is where the per-game points are displayed
-    );
-  };
-
-  const renderRegion = (
-    regionName: string,
-    startIndex: number,
-    isReversed: boolean = false
-  ) => {
-    const roundCounts = [8, 4, 2, 1];
-    let currentIndex = startIndex;
-
-    return (
-      <Region>
-        <Typography variant="h6" sx={{ mb: 2, textAlign: "center" }}>
-          {regionName}
-        </Typography>
-        <Box
-          sx={{
-            display: "flex",
-            flexDirection: isReversed ? "row-reverse" : "row",
-          }}
-        >
-          {roundCounts.map((count, roundIndex) => {
-            const roundMatchups = getRegionMatchups(currentIndex, count);
-            currentIndex += count;
-            // Debug log to check round numbers
-            /*   console.log(`Region ${regionName}, Round ${roundIndex}:`, {
-              count,
-              currentIndex,
-              matchups: roundMatchups.map((m) => m.gameCode),
-            }); */
-            return (
-              <Round key={roundIndex}>
-                {roundMatchups.map((matchup) =>
-                  renderMatchup(matchup, 0, roundIndex === 0, roundIndex)
-                )}
-              </Round>
-            );
-          })}
-        </Box>
-      </Region>
-    );
-  };
-
-  const renderFinalFour = () => {
-    return (
-      <Box
-        sx={{
-          display: "flex",
-          flexDirection: "column",
-          minWidth: "220px",
-          mx: 4,
-          justifyContent: "center",
-          height: "100%",
-          alignSelf: "center",
-        }}
-      >
-        <TextField
-          value={bracketName}
-          onChange={(e) => onUpdateBracketName(e.target.value)}
-          placeholder="Enter Bracket Name"
-          size="small"
-          sx={{ mb: 2 }}
-        />
-        <Typography variant="h6" sx={{ mb: 2, textAlign: "center" }}>
-          Final Four
-        </Typography>
-        <Box sx={{ display: "flex", justifyContent: "space-between", gap: 4 }}>
-          <Box
-            sx={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-            }}
-          >
-            <Round>
-              {renderMatchup(matchups[60], 60, false, 3)}{" "}
-              {/* FF1: South vs West */}
-            </Round>
-          </Box>
-          <Box
-            sx={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-            }}
-          >
-            <Round>{renderMatchup(matchups[62], 62, false, 4)}</Round>{" "}
-            {/* Championship */}
-          </Box>
-          <Box
-            sx={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-            }}
-          >
-            <Round>
-              {renderMatchup(matchups[61], 61, false, 3)}{" "}
-              {/* FF2: East vs Midwest */}
-            </Round>
-          </Box>
-        </Box>
-        <Box
-          sx={{
-            mt: 4,
-            display: "flex",
-            justifyContent: "space-between",
-            gap: 4,
-          }}
-        >
-          <Typography
-            variant="body2"
-            sx={{ color: "success.main", textAlign: "center", flex: 1 }}
-          >
-            FF1:{" "}
-            {(() => {
-              if (matchups[61]?.winner) {
-                const winner =
-                  matchups[61].winner === "top"
-                    ? matchups[61].topTeam
-                    : matchups[61].bottomTeam;
-                const gameResult = typedMarchMadnessGames["FF1"];
-                if (gameResult && gameResult["Winning Team"] === winner.name) {
-                  return gameResult.points || 0;
-                }
-              }
-              return 0;
-            })()}{" "}
-            points
-          </Typography>
-          <Typography
-            variant="body2"
-            sx={{ color: "success.main", textAlign: "center", flex: 1 }}
-          >
-            CH1:{" "}
-            {(() => {
-              if (matchups[62]?.winner) {
-                const winner =
-                  matchups[62].winner === "top"
-                    ? matchups[62].topTeam
-                    : matchups[62].bottomTeam;
-                const gameResult = typedMarchMadnessGames["CH1"];
-                if (gameResult && gameResult["Winning Team"] === winner.name) {
-                  return gameResult.points || 0;
-                }
-              }
-              return 0;
-            })()}{" "}
-            points
-          </Typography>
-          <Typography
-            variant="body2"
-            sx={{ color: "success.main", textAlign: "center", flex: 1 }}
-          >
-            FF2:{" "}
-            {(() => {
-              if (matchups[60]?.winner) {
-                const winner =
-                  matchups[60].winner === "top"
-                    ? matchups[60].topTeam
-                    : matchups[60].bottomTeam;
-                const gameResult = typedMarchMadnessGames["FF2"];
-                if (gameResult && gameResult["Winning Team"] === winner.name) {
-                  return gameResult.points || 0;
-                }
-              }
-              return 0;
-            })()}{" "}
-            points
-          </Typography>
-        </Box>
-        <Typography
-          variant="h6"
-          sx={{
-            mt: 2,
-            textAlign: "center",
-            color: "success.main",
-            fontWeight: "bold",
-          }}
-        >
-          Scores by Round:
-          {(() => {
-            const roundNames = [
-              "Round of 64",
-              "Round of 32",
-              "Sweet 16",
-              "Elite 8",
-              "Final Four",
-              "Championship",
-            ];
-            const roundScores = Array(6).fill(0);
-
-            // Calculate scores for first 4 rounds (regions)
-            matchups.forEach((matchup, index) => {
-              if (matchup.winner) {
-                const winner =
-                  matchup.winner === "top"
-                    ? matchup.topTeam
-                    : matchup.bottomTeam;
-                const gameResult = typedMarchMadnessGames[matchup.gameCode];
-                if (gameResult && gameResult["Winning Team"] === winner.name) {
-                  let round;
-                  // Round of 64: indices 0-7, 15-21, 30-37, 45-51
-                  const round64Indices = [
-                    ...Array.from({ length: 8 }, (_, i) => i), // 0-7
-                    ...Array.from({ length: 8 }, (_, i) => i + 15), // 15-22
-                    ...Array.from({ length: 8 }, (_, i) => i + 30), // 30-37
-                    ...Array.from({ length: 8 }, (_, i) => i + 45), // 45-52
-                  ];
-                  // Round of 32: indices 8-11, 23-26, 38-41, 53-56
-                  const round32Indices = [
-                    ...Array.from({ length: 4 }, (_, i) => i + 8), // 8-11
-                    ...Array.from({ length: 4 }, (_, i) => i + 23), // 23-26
-                    ...Array.from({ length: 4 }, (_, i) => i + 38), // 38-41
-                    ...Array.from({ length: 4 }, (_, i) => i + 53), // 53-56
-                  ];
-                  // Sweet 16 and Elite 8 indices
-                  const sweet16Indices = [12, 13, 27, 28, 42, 43, 57, 58];
-                  const elite8Indices = [14, 29, 44, 59];
-
-                  if (round64Indices.includes(index)) round = 0;
-                  else if (round32Indices.includes(index)) round = 1;
-                  else if (sweet16Indices.includes(index)) round = 2;
-                  else if (elite8Indices.includes(index)) round = 3;
-                  if (round !== undefined) {
-                    roundScores[round] += gameResult.points || 0;
-                  }
-                }
-              }
-            });
-
-            // Final Four (round 4)
-            matchups.slice(60, 62).forEach((matchup) => {
-              if (matchup.winner) {
-                const winner =
-                  matchup.winner === "top"
-                    ? matchup.topTeam
-                    : matchup.bottomTeam;
-                const gameResult = typedMarchMadnessGames[matchup.gameCode];
-                if (gameResult && gameResult["Winning Team"] === winner.name) {
-                  roundScores[4] += gameResult.points || 0;
-                }
-              }
-            });
-
-            // Championship (round 5)
-            if (matchups[62]?.winner) {
-              const winner =
-                matchups[62].winner === "top"
-                  ? matchups[62].topTeam
-                  : matchups[62].bottomTeam;
-              const gameResult = typedMarchMadnessGames[matchups[62].gameCode];
-              if (gameResult && gameResult["Winning Team"] === winner.name) {
-                roundScores[5] += gameResult.points || 0;
-              }
-            }
-
-            return (
-              <Box
-                sx={{ display: "flex", flexDirection: "column", gap: 1, mt: 1 }}
-              >
-                {roundScores.map((score, index) => (
-                  <Typography
-                    key={index}
-                    variant="body2"
-                    sx={{ color: "text.secondary" }}
-                  >
-                    {roundNames[index]}: {score} points
-                  </Typography>
-                ))}
-                <Typography
-                  variant="h6"
-                  sx={{ color: "success.main", fontWeight: "bold", mt: 1 }}
-                >
-                  Total Score: {totalScore}
-                </Typography>
-                {useTestData && (
-                  <Typography
-                    variant="h6"
-                    sx={{
-                      color: "error.main",
-                      fontWeight: "bold",
-                      textAlign: "center",
-                      mt: 1,
-                    }}
-                  >
-                    SCORING BASED ON TEST DATA
-                  </Typography>
-                )}
-              </Box>
-            );
-          })()}
-        </Typography>
-      </Box>
-    );
-  };
+  const roundScores = calcRoundScores(matchups, games);
 
   return (
-    <Box
-      sx={{
-        display: "flex",
-        flexDirection: "column",
-        justifyContent: "center",
-        gap: 4,
-        p: 2,
-        minHeight: "100vh",
-      }}
-    >
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "center",
-          gap: 4,
-        }}
-      >
-        <Box
-          sx={{
-            display: "flex",
-            flexDirection: "column",
-            gap: 4,
-            justifyContent: "center",
-          }}
-        >
-          {renderRegion("South", 30)}
-          {renderRegion("West", 15)}
-        </Box>
-        {renderFinalFour()}
-        <Box
-          sx={{
-            display: "flex",
-            flexDirection: "column",
-            gap: 4,
-            justifyContent: "center",
-          }}
-        >
-          {renderRegion("East", 0, true)}
-          {renderRegion("Midwest", 45, true)}
-        </Box>
-      </Box>
-      <Box
-        sx={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          gap: 2,
-          mt: 2,
-        }}
-      >
-        <FormControlLabel
-          control={
-            <Checkbox
-              checked={showGameCode}
-              onChange={(e) => setShowGameCode(e.target.checked)}
-            />
-          }
-          label="Show Game Code"
-        />
-        <FormControlLabel
-          control={
-            <Checkbox
-              checked={useTestData}
-              onChange={(e) => onUpdateUseTestData(e.target.checked)}
-            />
-          }
-          label="Use Test Data"
-        />
-      </Box>
-    </Box>
+    <div style={{ background: C.bg, minHeight: '100vh', padding: 16, fontFamily: 'system-ui, sans-serif' }}>
+      {/* Main bracket row */}
+      <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'flex-start', gap: 0, overflowX: 'auto' }}>
+
+        {/* Left side: East (top) + South (bottom), ltr */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
+          <Region name='East'  matchups={east}  games={games} onPick={handlePick} dir='ltr' showGameCode={showGameCode} />
+          <Region name='South' matchups={south} games={games} onPick={handlePick} dir='ltr' showGameCode={showGameCode} />
+        </div>
+
+        {/* Center: Final Four + Championship */}
+        <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignSelf: 'center', padding: '0 16px' }}>
+          <FinalFourCenter
+            matchups={ffMid}
+            games={games}
+            onPick={handlePick}
+            bracketName={bracketName}
+            onUpdateBracketName={onUpdateBracketName}
+            totalScore={totalScore}
+            useTestData={useTestData}
+            tiebreakerScore={tiebreakerScore}
+            onUpdateTiebreakerScore={setTiebreakerScore}
+          />
+          {/* Round scores */}
+          <div style={{ marginTop: 12, fontSize: 11, color: C.text }}>
+            {roundScores.map(r => (
+              <div key={r.name} style={{ display: 'flex', justifyContent: 'space-between', gap: 16, padding: '1px 0' }}>
+                <span style={{ color: C.seed }}>{r.name}</span>
+                <span style={{ fontWeight: 600, color: r.score > 0 ? C.points : C.seed }}>{r.score}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Right side: West (top) + Midwest (bottom), rtl */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
+          <Region name='West'    matchups={west}    games={games} onPick={handlePick} dir='rtl' showGameCode={showGameCode} />
+          <Region name='Midwest' matchups={midwest} games={games} onPick={handlePick} dir='rtl' showGameCode={showGameCode} />
+        </div>
+      </div>
+
+      {/* Controls */}
+      <div style={{ marginTop: 16, display: 'flex', gap: 16, alignItems: 'center', fontSize: 12 }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer' }}>
+          <input type='checkbox' checked={showGameCode} onChange={e => setShowGameCode(e.target.checked)} />
+          Show game codes
+        </label>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer' }}>
+          <input type='checkbox' checked={useTestData} onChange={e => onUpdateUseTestData(e.target.checked)} />
+          Use test data
+        </label>
+      </div>
+    </div>
   );
 }
