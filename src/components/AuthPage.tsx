@@ -74,12 +74,10 @@ export default function AuthPage({ onViewLeaderboard }: AuthPageProps) {
               <input style={inputStyle} value={displayName} onChange={e => setDisplayName(e.target.value)} placeholder='e.g. John Smith' />
             </div>
           )}
-
           <div>
             <label style={{ fontSize: 12, color: C.seed, display: 'block', marginBottom: 4 }}>Email</label>
             <input style={inputStyle} type='email' value={email} onChange={e => setEmail(e.target.value)} placeholder='you@example.com' />
           </div>
-
           {mode !== 'forgot' && (
             <div>
               <label style={{ fontSize: 12, color: C.seed, display: 'block', marginBottom: 4 }}>Password</label>
@@ -95,17 +93,14 @@ export default function AuthPage({ onViewLeaderboard }: AuthPageProps) {
                   type='button'
                   onClick={() => setShowPassword(s => !s)}
                   style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: C.seed, padding: 0, lineHeight: 1 }}
-                  title={showPassword ? 'Hide password' : 'Show password'}
                 >
                   {showPassword ? '🙈' : '👁'}
                 </button>
               </div>
             </div>
           )}
-
           {error && <div style={{ fontSize: 12, color: C.error }}>{error}</div>}
           {success && <div style={{ fontSize: 12, color: C.success }}>{success}</div>}
-
           <button
             type='submit'
             disabled={loading}
@@ -113,20 +108,13 @@ export default function AuthPage({ onViewLeaderboard }: AuthPageProps) {
           >
             {loading ? '...' : mode === 'login' ? 'Sign in' : mode === 'register' ? 'Create account' : 'Send reset email'}
           </button>
-
-          {onViewLeaderboard && (
-            <button
-              type='button'
-              onClick={onViewLeaderboard}
-              style={{ width: '100%', padding: '8px 0', borderRadius: 4, background: '#fff', color: C.header, border: `1px solid ${C.border}`, fontSize: 13, cursor: 'pointer', marginTop: 4 }}
-            >
-              View Leaderboard (no login)
-            </button>
-          )}
-            {mode === 'login' && (<>
-              <span>No account? <Btn label='Register' onClick={() => reset('register')} /></span>
-              <span>Forgot password? <Btn label='Reset it' onClick={() => reset('forgot')} /></span>
-            </>)}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, textAlign: 'center', fontSize: 12, color: C.seed }}>
+            {mode === 'login' && (
+              <>
+                <span>No account? <Btn label='Register' onClick={() => reset('register')} /></span>
+                <span>Forgot password? <Btn label='Reset it' onClick={() => reset('forgot')} /></span>
+              </>
+            )}
             {mode === 'register' && (
               <span>Have an account? <Btn label='Sign in' onClick={() => reset('login')} /></span>
             )}
@@ -135,6 +123,7 @@ export default function AuthPage({ onViewLeaderboard }: AuthPageProps) {
             )}
           </div>
         </form>
+
         {onViewLeaderboard && (
           <button
             type='button'
@@ -151,7 +140,7 @@ export default function AuthPage({ onViewLeaderboard }: AuthPageProps) {
 
 function Btn({ label, onClick }: { label: string; onClick: () => void }) {
   return (
-    <button onClick={onClick} type='button' style={{ background: 'none', border: 'none', color: '#1a1a2e', cursor: 'pointer', fontSize: 12, textDecoration: 'underline', padding: 0 }}>
+    <button onClick={onClick} type='button' style={{ background: 'none', border: 'none', color: C.header, cursor: 'pointer', fontSize: 12, textDecoration: 'underline', padding: 0 }}>
       {label}
     </button>
   );
