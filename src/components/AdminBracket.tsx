@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { gameCodeToIndex, gameFlowMap } from '../utils/bracketTransform';
-import type { Matchup } from '../utils/bracketTransform';
+import { gameFlowMap } from '../utils/bracketTransform';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -39,7 +38,20 @@ function resolveTeam(games: GamesMap, gameCode: string, position: 'top' | 'botto
   if (!g) return { name: 'TBD', seed: null };
   const name = (position === 'top' ? g['Top Team'] : g['Bottom Team']) as string ?? 'TBD';
   const seed = (position === 'top' ? g['Top Team Seed'] : g['Bottom Team Seed']) as number ?? null;
-  return { name, seed };
+  return { name: name ?? 'TBD', seed };
+}
+
+// Walk downstream from a game code, returning ordered list of {nextGame, position} pairs
+function getDownstream(gameCode: string): Array<{ code: string; position: 'top' | 'bottom' }> {
+  const result: Array<{ code: string; position: 'top' | 'bottom' }> = [];
+  let current = gameCode;
+  while (true) {
+    const info = gameFlowMap[current];
+    if (!info) break;
+    result.push({ code: info.nextGame, position: info.position });
+    current = info.nextGame;
+  }
+  return result;
 }
 
 // ─── TeamRow ──────────────────────────────────────────────────────────────────
@@ -50,17 +62,9 @@ function AdminTeamRow({ name, seed, isWinner, isTbd, onClick }: {
   return (
     <div
       onClick={isTbd ? undefined : onClick}
-      style={{
-        display: 'flex', alignItems: 'center', gap: 6,
-        padding: '0 8px', height: 26,
-        background: isWinner ? C.winner : 'transparent',
-        cursor: isTbd ? 'default' : 'pointer',
-        userSelect: 'none',
-      }}
+      style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '0 8px', height: 26, background: isWinner ? C.winner : 'transparent', cursor: isTbd ? 'default' : 'pointer', userSelect: 'none' }}
     >
-      <span style={{ fontSize: 10, color: C.seed, minWidth: 14, textAlign: 'right', flexShrink: 0 }}>
-        {seed ?? ''}
-      </span>
+      <span style={{ fontSize: 10, color: C.seed, minWidth: 14, textAlign: 'right', flexShrink: 0 }}>{seed ?? ''}</span>
       <span style={{ fontSize: 12, color: isWinner ? C.winnerText : isTbd ? C.seed : C.text, fontWeight: isWinner ? 700 : 400, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
         {name}{isWinner ? ' ✓' : ''}
       </span>
@@ -84,23 +88,14 @@ function AdminMatchupCard({ gameCode, games, onPick, saving, top }: {
 
   return (
     <div style={{ position: 'absolute', top, left: 0, width: ROUND_W }}>
-      <div style={{
-        width: ROUND_W, height: CARD_H,
-        background: isSaving ? C.pending : C.cardBg,
-        border: `1px solid ${winnerName ? C.winnerBorder : C.cardBorder}`,
-        borderRadius: 6, overflow: 'hidden',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
-        display: 'flex', flexDirection: 'column',
-        opacity: isSaving ? 0.7 : 1, transition: 'opacity 0.15s',
-      }}>
+      <div style={{ width: ROUND_W, height: CARD_H, background: isSaving ? C.pending : C.cardBg, border: `1px solid ${winnerName ? C.winnerBorder : C.cardBorder}`, borderRadius: 6, overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', display: 'flex', flexDirection: 'column', opacity: isSaving ? 0.7 : 1, transition: 'opacity 0.15s' }}>
         <AdminTeamRow
           name={topTeam.name} seed={topTeam.seed}
           isWinner={!!winnerName && winnerName === topTeam.name}
           isTbd={!hasTeams}
           onClick={() => {
             if (!hasTeams) return;
-            if (winnerName === topTeam.name) onPick(gameCode, topTeam.name, bottomTeam.name, true);
-            else onPick(gameCode, topTeam.name, bottomTeam.name, false);
+            onPick(gameCode, topTeam.name, bottomTeam.name, winnerName === topTeam.name);
           }}
         />
         <div style={{ height: 1, background: C.divider, flexShrink: 0 }} />
@@ -110,8 +105,7 @@ function AdminMatchupCard({ gameCode, games, onPick, saving, top }: {
           isTbd={!hasTeams}
           onClick={() => {
             if (!hasTeams) return;
-            if (winnerName === bottomTeam.name) onPick(gameCode, bottomTeam.name, topTeam.name, true);
-            else onPick(gameCode, bottomTeam.name, topTeam.name, false);
+            onPick(gameCode, bottomTeam.name, topTeam.name, winnerName === bottomTeam.name);
           }}
         />
       </div>
@@ -153,16 +147,13 @@ function ConnectorSVG({ fromRound, dir }: { fromRound: number; dir: 'ltr' | 'rtl
 // ─── RoundColumn ──────────────────────────────────────────────────────────────
 
 function AdminRoundColumn({ gameCodes, roundIdx, label, games, onPick, saving }: {
-  gameCodes: string[]; roundIdx: number; label: string;
-  games: GamesMap;
+  gameCodes: string[]; roundIdx: number; label: string; games: GamesMap;
   onPick: (gameCode: string, winner: string, loser: string, clear: boolean) => void;
   saving: string | null;
 }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0 }}>
-      <div style={{ fontSize: 10, color: C.roundLabel, marginBottom: 4, whiteSpace: 'nowrap', fontWeight: 600, letterSpacing: '0.03em' }}>
-        {label}
-      </div>
+      <div style={{ fontSize: 10, color: C.roundLabel, marginBottom: 4, whiteSpace: 'nowrap', fontWeight: 600, letterSpacing: '0.03em' }}>{label}</div>
       <div style={{ position: 'relative', width: ROUND_W, height: REGION_H }}>
         {gameCodes.map((code, i) => (
           <AdminMatchupCard key={code} gameCode={code} games={games} onPick={onPick} saving={saving} top={cardTop(roundIdx, i)} />
@@ -195,20 +186,12 @@ function AdminRegion({ name, games, onPick, saving, dir }: {
   if (dir === 'ltr') {
     columns.forEach((col, i) => {
       children.push(col);
-      if (i < 3) children.push(
-        <div key={`c${i}`} style={{ display: 'flex', alignItems: 'flex-start', paddingTop: 18 }}>
-          <ConnectorSVG fromRound={i} dir='ltr' />
-        </div>
-      );
+      if (i < 3) children.push(<div key={`c${i}`} style={{ display: 'flex', alignItems: 'flex-start', paddingTop: 18 }}><ConnectorSVG fromRound={i} dir='ltr' /></div>);
     });
   } else {
     [...columns].reverse().forEach((col, i) => {
       children.push(col);
-      if (i < 3) children.push(
-        <div key={`c${i}`} style={{ display: 'flex', alignItems: 'flex-start', paddingTop: 18 }}>
-          <ConnectorSVG fromRound={3 - i - 1} dir='rtl' />
-        </div>
-      );
+      if (i < 3) children.push(<div key={`c${i}`} style={{ display: 'flex', alignItems: 'flex-start', paddingTop: 18 }}><ConnectorSVG fromRound={3 - i - 1} dir='rtl' /></div>);
     });
   }
 
@@ -231,9 +214,7 @@ function AdminFinalFour({ games, onPick, saving }: {
 }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 200, padding: '0 16px', gap: 12 }}>
-      <div style={{ fontSize: 11, fontWeight: 700, color: C.headerText, background: C.header, padding: '3px 10px', borderRadius: 4, letterSpacing: '0.05em', width: '100%', textAlign: 'center', boxSizing: 'border-box' }}>
-        FINAL FOUR
-      </div>
+      <div style={{ fontSize: 11, fontWeight: 700, color: C.headerText, background: C.header, padding: '3px 10px', borderRadius: 4, letterSpacing: '0.05em', width: '100%', textAlign: 'center', boxSizing: 'border-box' }}>FINAL FOUR</div>
       {['FF1', 'FF2'].map(code => {
         const g = games[code];
         const winner = g ? g['Winning Team'] as string | null : null;
@@ -245,18 +226,14 @@ function AdminFinalFour({ games, onPick, saving }: {
           <div key={code} style={{ width: ROUND_W }}>
             <div style={{ fontSize: 9, color: C.seed, textAlign: 'center', marginBottom: 4 }}>{code}</div>
             <div style={{ width: ROUND_W, height: CARD_H, background: isSaving ? C.pending : C.cardBg, border: `1px solid ${winner ? C.winnerBorder : C.cardBorder}`, borderRadius: 6, overflow: 'hidden', display: 'flex', flexDirection: 'column', opacity: isSaving ? 0.7 : 1 }}>
-              <AdminTeamRow name={top.name} seed={top.seed} isWinner={!!winner && winner === top.name} isTbd={!hasTeams}
-                onClick={() => { if (!hasTeams) return; onPick(code, top.name, bottom.name, winner === top.name); }} />
+              <AdminTeamRow name={top.name} seed={top.seed} isWinner={!!winner && winner === top.name} isTbd={!hasTeams} onClick={() => { if (!hasTeams) return; onPick(code, top.name, bottom.name, winner === top.name); }} />
               <div style={{ height: 1, background: C.divider }} />
-              <AdminTeamRow name={bottom.name} seed={bottom.seed} isWinner={!!winner && winner === bottom.name} isTbd={!hasTeams}
-                onClick={() => { if (!hasTeams) return; onPick(code, bottom.name, top.name, winner === bottom.name); }} />
+              <AdminTeamRow name={bottom.name} seed={bottom.seed} isWinner={!!winner && winner === bottom.name} isTbd={!hasTeams} onClick={() => { if (!hasTeams) return; onPick(code, bottom.name, top.name, winner === bottom.name); }} />
             </div>
           </div>
         );
       })}
-      <div style={{ fontSize: 11, fontWeight: 700, color: C.headerText, background: C.header, padding: '3px 10px', borderRadius: 4, letterSpacing: '0.05em', width: '100%', textAlign: 'center', boxSizing: 'border-box' }}>
-        CHAMPIONSHIP
-      </div>
+      <div style={{ fontSize: 11, fontWeight: 700, color: C.headerText, background: C.header, padding: '3px 10px', borderRadius: 4, letterSpacing: '0.05em', width: '100%', textAlign: 'center', boxSizing: 'border-box' }}>CHAMPIONSHIP</div>
       {(() => {
         const code = 'CH1';
         const g = games[code];
@@ -268,11 +245,9 @@ function AdminFinalFour({ games, onPick, saving }: {
         return (
           <div style={{ width: ROUND_W }}>
             <div style={{ width: ROUND_W, height: CARD_H, background: isSaving ? C.pending : C.cardBg, border: `2px solid ${C.header}`, borderRadius: 6, overflow: 'hidden', display: 'flex', flexDirection: 'column', opacity: isSaving ? 0.7 : 1 }}>
-              <AdminTeamRow name={top.name} seed={top.seed} isWinner={!!winner && winner === top.name} isTbd={!hasTeams}
-                onClick={() => { if (!hasTeams) return; onPick(code, top.name, bottom.name, winner === top.name); }} />
+              <AdminTeamRow name={top.name} seed={top.seed} isWinner={!!winner && winner === top.name} isTbd={!hasTeams} onClick={() => { if (!hasTeams) return; onPick(code, top.name, bottom.name, winner === top.name); }} />
               <div style={{ height: 1, background: C.divider }} />
-              <AdminTeamRow name={bottom.name} seed={bottom.seed} isWinner={!!winner && winner === bottom.name} isTbd={!hasTeams}
-                onClick={() => { if (!hasTeams) return; onPick(code, bottom.name, top.name, winner === bottom.name); }} />
+              <AdminTeamRow name={bottom.name} seed={bottom.seed} isWinner={!!winner && winner === bottom.name} isTbd={!hasTeams} onClick={() => { if (!hasTeams) return; onPick(code, bottom.name, top.name, winner === bottom.name); }} />
             </div>
             {winner && <div style={{ textAlign: 'center', marginTop: 6, fontSize: 13, fontWeight: 700 }}>🏆 {winner}</div>}
           </div>
@@ -284,56 +259,57 @@ function AdminFinalFour({ games, onPick, saving }: {
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
-export default function AdminBracket({ matchups, games, onResultsChanged }: AdminBracketProps) {
+export default function AdminBracket({ games, onResultsChanged }: AdminBracketProps) {
   const [saving, setSaving] = useState<string | null>(null);
   const [lastSaved, setLastSaved] = useState<string | null>(null);
 
   const handlePick = async (gameCode: string, winner: string, loser: string, clear: boolean) => {
     setSaving(gameCode);
 
+    const updates: Promise<unknown>[] = [];
+
     if (clear) {
-      // Deselect — clear winner and remove team from next game slot
-      const updates: Promise<unknown>[] = [
+      // Clear this game's winner
+      updates.push(
         supabase.from('results').update({
           winning_team: null, losing_team: null, game_status: 'Scheduled',
-        }).eq('game_code', gameCode),
-      ];
-
-      const nextInfo = gameFlowMap[gameCode];
-      if (nextInfo) {
-        const col = nextInfo.position === 'top' ? 'top_team' : 'bottom_team';
-        const seedCol = nextInfo.position === 'top' ? 'top_team_seed' : 'bottom_team_seed';
+        }).eq('game_code', gameCode)
+      );
+      // Walk downstream, nulling the specific slot this game feeds into
+      // and clearing winners all the way to the championship
+      for (const { code, position } of getDownstream(gameCode)) {
+        const col = position === 'top' ? 'top_team' : 'bottom_team';
+        const seedCol = position === 'top' ? 'top_team_seed' : 'bottom_team_seed';
         updates.push(
-          supabase.from('results').update({ [col]: null, [seedCol]: null })
-            .eq('game_code', nextInfo.nextGame)
+          supabase.from('results').update({
+            [col]: null, [seedCol]: null,
+            winning_team: null, losing_team: null, game_status: 'Scheduled',
+          }).eq('game_code', code)
         );
       }
-
       await Promise.all(updates);
       setLastSaved(`${gameCode}: cleared`);
     } else {
-      // Set winner and propagate team name into next game's slot
-      const winnerSeed = (games[gameCode]?.['Top Team'] === winner
-        ? games[gameCode]?.['Top Team Seed']
-        : games[gameCode]?.['Bottom Team Seed']) as number | null;
-
-      const updates: Promise<unknown>[] = [
+      // Set winner
+      updates.push(
         supabase.from('results').update({
           winning_team: winner, losing_team: loser, game_status: 'Final',
-        }).eq('game_code', gameCode),
-      ];
-
+        }).eq('game_code', gameCode)
+      );
+      // Propagate winner into the immediate next slot only
       const nextInfo = gameFlowMap[gameCode];
       if (nextInfo) {
         const col = nextInfo.position === 'top' ? 'top_team' : 'bottom_team';
         const seedCol = nextInfo.position === 'top' ? 'top_team_seed' : 'bottom_team_seed';
+        const winnerSeed = (games[gameCode]?.['Top Team'] === winner
+          ? games[gameCode]?.['Top Team Seed']
+          : games[gameCode]?.['Bottom Team Seed']) as number | null;
         const nextUpdate: Record<string, unknown> = { [col]: winner };
         if (winnerSeed != null) nextUpdate[seedCol] = winnerSeed;
         updates.push(
           supabase.from('results').update(nextUpdate).eq('game_code', nextInfo.nextGame)
         );
       }
-
       await Promise.all(updates);
       setLastSaved(`${gameCode}: ${winner}`);
     }
@@ -349,7 +325,6 @@ export default function AdminBracket({ matchups, games, onResultsChanged }: Admi
         <span style={{ fontSize: 12, color: C.seed }}>Click a team to mark as winner. Click the winner again to deselect.</span>
         {lastSaved && <span style={{ fontSize: 12, color: '#2a7a2a' }}>✓ {lastSaved}</span>}
       </div>
-
       <div style={{ overflowX: 'auto' }}>
         <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'flex-start', gap: 0 }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
