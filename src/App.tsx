@@ -208,7 +208,7 @@ export default function App() {
 
   const Nav = () => (
     <div style={{ background: C.header, color: C.headerText, display: 'flex', alignItems: 'center', padding: '0 16px', height: 48, gap: 8, fontFamily: 'system-ui', fontSize: 13 }}>
-      <span style={{ fontWeight: 700, fontSize: 15, marginRight: 16 }}>🏀 2026 Bracket Pool</span>
+      <span style={{ fontWeight: 700, fontSize: 15, marginRight: 16 }}>🏀 2026 Upset Bracket</span>
       <NavBtn label='My Bracket' active={view === 'bracket'} onClick={() => view !== 'bracket' && setView('bracket')} />
       <NavBtn label='New Bracket' active={false} onClick={handleNewBracket} />
       <NavBtn label='Leaderboard' active={view === 'leaderboard' || view === 'view-bracket'} onClick={() => setView('leaderboard')} />
@@ -217,7 +217,7 @@ export default function App() {
         <span
           onClick={() => {
             const pw = prompt('Admin passphrase:');
-            if (pw === 'YOUR_SECRET_HERE') setAdminUnlocked(true);
+            if (pw === 'upsetting') setAdminUnlocked(true);
             else if (pw !== null) alert('Incorrect passphrase.');
           }}
           style={{ marginLeft: 'auto', fontSize: 11, opacity: 0.7, cursor: 'pointer' }}
@@ -238,7 +238,7 @@ export default function App() {
       <div style={{ fontFamily: 'system-ui', minHeight: '100vh', background: '#f5f5f5' }}>
         <Nav />
         <div style={{ maxWidth: 480, margin: '80px auto', background: '#fff', borderRadius: 8, padding: 32, boxShadow: '0 2px 12px rgba(0,0,0,0.1)' }}>
-          <h2 style={{ margin: '0 0 8px', fontSize: 20, color: C.header }}>2026 March Madness Pool</h2>
+          <h2 style={{ margin: '0 0 8px', fontSize: 20, color: C.header }}>2026 McKenzie Manor Upset Bracket</h2>
           <p style={{ margin: '0 0 24px', fontSize: 13, color: C.seed }}>
             Deadline: {deadlineLabel}
           </p>
