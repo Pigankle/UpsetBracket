@@ -77,8 +77,9 @@ export default function App() {
   const [bracketName, setBracketName] = useState('');
   const [tiebreakerScore, setTiebreakerScore] = useState('');
   const [onBehalfOf, setOnBehalfOf] = useState('');
-  const [useTestData, setUseTestData] = useState(false);<Matchup[]>(() => createInitialBracket(tournamentData));
-  const [matchups, setMatchups] = useState = useState<Matchup[]>(() => createInitialBracket(tournamentData));
+  const [useTestData, setUseTestData] = useState(false);
+  const [matchups, setMatchups] = useState<Matchup[]>(() => createInitialBracket(tournamentData));
+  const [viewMatchups, setViewMatchups] = useState<Matchup[]>(() => createInitialBracket(tournamentData));
   const [viewingBracketName, setViewingBracketName] = useState('');
   const [totalScore, setTotalScore] = useState(0);
   const [games, setGames] = useState<Record<string, Record<string, unknown>>>({});
