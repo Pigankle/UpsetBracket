@@ -99,8 +99,17 @@ export default function App() {
   };
 
   const handleResultsChanged = async () => {
-    await supabase.rpc('recalculate_all_scores');
     await loadResults();
+    const { data: allBrackets } = await supabase
+      .from('brackets')
+      .select('id, picks');
+    if (allBrackets) {
+      await Promise.all(
+        allBrackets.map(b =>
+          supabase.from('brackets').update({ picks: b.picks }).eq('id', b.id)
+        )
+      );
+    }
   };
 
   useEffect(() => {
