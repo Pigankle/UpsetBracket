@@ -108,8 +108,7 @@ export default function Leaderboard({ currentBracketId, onViewBracket }: Leaderb
   const canView = locked;
 
   return (
-    <div style={{ maxWidth: 750, margin: '0 auto', padding: '0 16px', fontFamily: 'system-ui' }}>
-      {!locked && (
+    <div style={{ maxWidth: 750, margin: '0 auto', padding: '0 16px', fontFamily: 'system-ui' }}>      {!locked && (
         <div style={{ background: '#fff8e1', border: '1px solid #f0c040', borderRadius: 6, padding: '10px 16px', marginBottom: 16, fontSize: 13, color: '#7a5c00' }}>
           🔒 Brackets are hidden until the submission deadline has passed. Only your own bracket is visible until then.
         </div>
@@ -178,6 +177,9 @@ export default function Leaderboard({ currentBracketId, onViewBracket }: Leaderb
           })}
         </tbody>
       </table>
+      <div style={{ fontSize: 11, color: C.seed, textAlign: 'right', marginTop: 8, fontStyle: 'italic' }}>
+        Note: Ceiling is approximate — not all possible outcomes are checked.
+      </div>
     </div>
   );
 }
