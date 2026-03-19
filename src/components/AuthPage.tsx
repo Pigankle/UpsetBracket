@@ -135,6 +135,15 @@ export default function AuthPage({ onViewLeaderboard }: AuthPageProps) {
             )}
           </div>
         </form>
+        {onViewLeaderboard && (
+          <button
+            type='button'
+            onClick={onViewLeaderboard}
+            style={{ width: '100%', padding: '8px 0', borderRadius: 4, background: '#fff', color: C.header, border: `1px solid ${C.border}`, fontSize: 13, cursor: 'pointer', marginTop: 12 }}
+          >
+            View Leaderboard (no login)
+          </button>
+        )}
       </div>
     </div>
   );
