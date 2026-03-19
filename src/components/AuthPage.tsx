@@ -15,7 +15,11 @@ const inputStyle = {
   boxSizing: 'border-box' as const, outline: 'none',
 };
 
-export default function AuthPage() {
+interface AuthPageProps {
+  onViewLeaderboard?: () => void;
+}
+
+export default function AuthPage({ onViewLeaderboard }: AuthPageProps) {
   const [mode, setMode] = useState<'login' | 'register' | 'forgot'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -110,7 +114,15 @@ export default function AuthPage() {
             {loading ? '...' : mode === 'login' ? 'Sign in' : mode === 'register' ? 'Create account' : 'Send reset email'}
           </button>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, textAlign: 'center', fontSize: 12, color: C.seed }}>
+          {onViewLeaderboard && (
+            <button
+              type='button'
+              onClick={onViewLeaderboard}
+              style={{ width: '100%', padding: '8px 0', borderRadius: 4, background: '#fff', color: C.header, border: `1px solid ${C.border}`, fontSize: 13, cursor: 'pointer', marginTop: 4 }}
+            >
+              View Leaderboard (no login)
+            </button>
+          )}
             {mode === 'login' && (<>
               <span>No account? <Btn label='Register' onClick={() => reset('register')} /></span>
               <span>Forgot password? <Btn label='Reset it' onClick={() => reset('forgot')} /></span>

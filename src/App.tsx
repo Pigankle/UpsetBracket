@@ -216,7 +216,40 @@ export default function App() {
     </div>
   );
 
-  if (!user || !profile) return <AuthPage />;
+  if (!user || !profile) {
+    // Allow public access to leaderboard and bracket viewing
+    if (view === 'leaderboard') return (
+      <div style={{ minHeight: '100vh', background: '#f5f5f5', fontFamily: 'system-ui' }}>
+        <PublicNav onLogin={() => setView('leaderboard')} />
+        <div style={{ padding: '24px 16px' }}>
+          <h2 style={{ textAlign: 'center', margin: '0 0 20px', fontSize: 18, color: C.header }}>Leaderboard</h2>
+          <Leaderboard currentBracketId={null} onViewBracket={handleViewBracket} />
+        </div>
+      </div>
+    );
+    if (view === 'view-bracket') return (
+      <div style={{ minHeight: '100vh', background: '#f5f5f5', fontFamily: 'system-ui' }}>
+        <PublicNav onLogin={() => setView('leaderboard')} />
+        <div style={{ textAlign: 'center', padding: '12px 0', fontSize: 13, color: C.seed, display: 'flex', justifyContent: 'center', gap: 16, alignItems: 'center' }}>
+          <span>Viewing: <strong>{viewingBracketName}</strong></span>
+          <button onClick={() => setView('leaderboard')} style={{ fontSize: 13, color: C.header, background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>
+            Back to leaderboard
+          </button>
+        </div>
+        <div style={{ width: '100%', overflowX: 'auto' }}>
+          <BracketDisplay
+            initialMatchups={viewMatchups} onUpdateBracket={() => {}}
+            bracketName={viewingBracketName} onUpdateBracketName={() => {}}
+            totalScore={calculateScore(viewMatchups, games)}
+            useTestData={false} onUpdateUseTestData={() => {}}
+            games={games} tiebreakerScore='' onUpdateTiebreakerScore={() => {}}
+            readOnly
+          />
+        </div>
+      </div>
+    );
+    return <AuthPage onViewLeaderboard={() => setView('leaderboard')} />;
+  }
 
   // ── Nav ──────────────────────────────────────────────────────────────────
 
@@ -338,6 +371,19 @@ export default function App() {
           readOnly={!canEdit}
         />
       </div>
+    </div>
+  );
+}
+
+function PublicNav({ onLogin }: { onLogin: () => void }) {
+  return (
+    <div style={{ background: C.header, color: '#fff', display: 'flex', alignItems: 'center', padding: '0 16px', height: 48, gap: 8, fontFamily: 'system-ui', fontSize: 13 }}>
+      <span style={{ fontWeight: 700, fontSize: 15, marginRight: 16 }}>🏀 2026 Bracket Pool</span>
+      <span style={{ marginLeft: 'auto' }}>
+        <button onClick={onLogin} style={{ background: 'none', border: '1px solid rgba(255,255,255,0.4)', borderRadius: 3, color: '#fff', fontSize: 11, padding: '2px 8px', cursor: 'pointer' }}>
+          Sign in
+        </button>
+      </span>
     </div>
   );
 }
