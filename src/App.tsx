@@ -1,189 +1,225 @@
-import { useState, useRef } from "react";
-import { Container, Typography, Box, Button } from "@mui/material";
-import BracketDisplay from "./components/BracketDisplay";
-import { createInitialBracket, Matchup, SavedBracket } from "./utils/bracketTransform";
-import tournamentData from "./data/ncaa_2025_bracket.json";
-import marchMadnessGames from "./data/march_madness_games.json";
-import marchMadnessGamesTest from "./data/march_madness_games_TEST_DATA.json";
+import { useState, useEffect } from 'react';
+import BracketDisplay from './components/BracketDisplay';
+import { createInitialBracket, Matchup, SavedBracket } from './utils/bracketTransform';
+import tournamentData from './data/ncaa_2025_bracket.json';
+import { supabase } from './lib/supabase';
 
-interface TournamentTeam {
-  seed: string | number;
-  name: string;
-}
-
-interface TournamentGame {
-  game_code: string;
-  top: string | TournamentTeam;
-  bottom: string | TournamentTeam;
-}
-
-interface TournamentData {
-  regions: {
-    [key: string]: {
-      rounds: {
-        "Round of 64": TournamentGame[];
-        "Round of 32": TournamentGame[];
-        "Sweet 16": TournamentGame[];
-        "Elite Eight": TournamentGame[];
-      };
-    };
-  };
-  final_four: {
-    games: TournamentGame[];
-  };
-  championship: TournamentGame;
-}
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 interface MarchMadnessGame {
-  GameID: number;
-  Round: number;
-  "Game Number": number;
-  "Top Team": string;
-  "Bottom Team": string;
-  "Top Team Score": number;
-  "Bottom Team Score": number;
-  "Winning Team": string;
-  "Losing Team": string;
-  "Winning Team Seed": number;
-  "Losing Team Seed": number;
-  "Winning Team Score": number;
-  "Losing Team Score": number;
-  "Game Status": string;
-  "GameID.1": number;
-  "Top Team Seed": number;
-  "Bottom Team Seed": number;
-  "Game Region": string;
-  "Top Team Char6": string;
-  "Bottom Team Char6": string;
-  "Winning Team Char6": string;
-  "Losing Team Char6": string;
+  game_code: string;
+  top_team: string;
+  bottom_team: string;
+  winning_team: string | null;
+  losing_team: string | null;
+  top_team_seed: number;
+  bottom_team_seed: number;
+  winning_team_seed: number | null;
+  losing_team_seed: number | null;
+  winning_team_score: number | null;
+  losing_team_score: number | null;
+  top_team_score: number | null;
+  bottom_team_score: number | null;
+  game_status: string;
+  game_region: string;
+  top_team_char6: string;
+  bottom_team_char6: string;
+  winning_team_char6: string;
+  losing_team_char6: string;
   points: number;
 }
 
-interface MarchMadnessGames {
-  [key: string]: MarchMadnessGame;
+// BracketDisplay expects the old camelCase/spaced key format — adapt from Supabase snake_case
+function adaptGame(g: MarchMadnessGame): Record<string, unknown> {
+  return {
+    'Top Team': g.top_team,
+    'Bottom Team': g.bottom_team,
+    'Winning Team': g.winning_team,
+    'Losing Team': g.losing_team,
+    'Top Team Seed': g.top_team_seed,
+    'Bottom Team Seed': g.bottom_team_seed,
+    'Winning Team Seed': g.winning_team_seed,
+    'Losing Team Seed': g.losing_team_seed,
+    'Winning Team Score': g.winning_team_score,
+    'Losing Team Score': g.losing_team_score,
+    'Top Team Score': g.top_team_score,
+    'Bottom Team Score': g.bottom_team_score,
+    'Game Status': g.game_status,
+    'Game Region': g.game_region,
+    'Top Team Char6': g.top_team_char6,
+    'Bottom Team Char6': g.bottom_team_char6,
+    'Winning Team Char6': g.winning_team_char6,
+    'Losing Team Char6': g.losing_team_char6,
+    points: g.points,
+  };
 }
 
-export default function App() {
-  const [bracketName, setBracketName] = useState("My Bracket");
-  const [useTestData, setUseTestData] = useState(true);
-  const [matchups, setMatchups] = useState<Matchup[]>(() =>
-    createInitialBracket(tournamentData)
-  );
-  const [totalScore, setTotalScore] = useState(0);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
-  const typedMarchMadnessGames = useTestData
-    ? (marchMadnessGamesTest as unknown as Record<string, MarchMadnessGame>)
-    : (marchMadnessGames as unknown as Record<string, MarchMadnessGame>);
+function matchupsToSavedBracket(matchups: Matchup[], name: string): SavedBracket {
+  const picks: Record<string, string> = {};
+  matchups.forEach(m => {
+    if (m.gameCode && m.winner) {
+      picks[m.gameCode] = m.winner === 'top' ? m.topTeam.name : m.bottomTeam.name;
+    }
+  });
+  return { name, picks };
+}
+
+function calculateScore(matchups: Matchup[], games: Record<string, Record<string, unknown>>): number {
+  let score = 0;
+  matchups.forEach(m => {
+    if (!m.gameCode || !m.winner) return;
+    const g = games[m.gameCode];
+    if (!g) return;
+    const picked = m.winner === 'top' ? m.topTeam.name : m.bottomTeam.name;
+    if (picked === g['Winning Team']) score += (g.points as number);
+  });
+  return score;
+}
+
+// ─── Component ────────────────────────────────────────────────────────────────
+
+export default function App() {
+  const [bracketId, setBracketId] = useState<string | null>(null);
+  const [bracketName, setBracketName] = useState('My Bracket');
+  const [tiebreakerScore, setTiebreakerScore] = useState('');
+  const [useTestData, setUseTestData] = useState(false);
+  const [matchups, setMatchups] = useState<Matchup[]>(() => createInitialBracket(tournamentData));
+  const [totalScore, setTotalScore] = useState(0);
+  const [games, setGames] = useState<Record<string, Record<string, unknown>>>({});
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saved' | 'error'>('idle');
+
+  // Load results from Supabase on mount
+  useEffect(() => {
+    async function loadResults() {
+      const { data, error } = await supabase.from('results').select('*');
+      if (error) {
+        console.error('Failed to load results:', error);
+        setLoading(false);
+        return;
+      }
+      const adapted: Record<string, Record<string, unknown>> = {};
+      (data as MarchMadnessGame[]).forEach(g => {
+        adapted[g.game_code] = adaptGame(g);
+      });
+      setGames(adapted);
+      setLoading(false);
+    }
+    loadResults();
+  }, []);
+
+  // Recalculate score whenever matchups or games change
+  useEffect(() => {
+    setTotalScore(calculateScore(matchups, games));
+  }, [matchups, games]);
 
   const handleUpdateBracket = (newMatchups: Matchup[]) => {
     setMatchups(newMatchups);
-    calculateScore(newMatchups);
   };
 
-  const calculateScore = (currentMatchups: Matchup[]) => {
-    let score = 0;
-    currentMatchups.forEach((matchup) => {
-      // Only calculate points if the user has made a pick
-      if (matchup && matchup.gameCode && matchup.winner) {
-        const gameData = (typedMarchMadnessGames as MarchMadnessGames)[
-          matchup.gameCode
-        ];
-        if (gameData) {
-          const pickedTeam =
-            matchup.winner === "top"
-              ? matchup.topTeam.name
-              : matchup.bottomTeam.name;
-          const actualWinner = gameData["Winning Team"];
-          if (pickedTeam === actualWinner) {
-            score += gameData.points;
-          }
-        }
-      }
-    });
-    setTotalScore(score);
-  };
+  const handleSaveBracket = async () => {
+    setSaving(true);
+    setSaveStatus('idle');
 
-  const handleSaveBracket = () => {
-    // Convert matchups to picks format
-    const picks: { [key: string]: string } = {};
-    matchups.forEach((matchup) => {
-      if (matchup.gameCode && matchup.winner) {
-        picks[matchup.gameCode] = matchup.winner === "top" ? matchup.topTeam.name : matchup.bottomTeam.name;
-      }
-    });
-
-    const bracketData = {
+    const saved = matchupsToSavedBracket(matchups, bracketName);
+    const payload = {
       name: bracketName,
-      picks,
-      totalScore,
+      picks: saved.picks,
+      tiebreaker: tiebreakerScore ? parseInt(tiebreakerScore) : null,
     };
-    const blob = new Blob([JSON.stringify(bracketData, null, 2)], {
-      type: "application/json",
-    });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${bracketName || "bracket"}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
 
-  const handleLoadBracket = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const bracketData = JSON.parse(e.target?.result as string) as SavedBracket;
-        // Create a new bracket with the saved picks
-        const newMatchups = createInitialBracket(tournamentData, bracketData);
-        setMatchups(newMatchups);
-        setBracketName(bracketData.name || "");
-        setTotalScore(bracketData.totalScore || 0);
-      } catch (error) {
-        console.error("Error loading bracket:", error);
+    let error;
+    if (bracketId) {
+      // Update existing bracket
+      ({ error } = await supabase
+        .from('brackets')
+        .update(payload)
+        .eq('id', bracketId));
+    } else {
+      // Insert new bracket
+      const { data, error: insertError } = await supabase
+        .from('brackets')
+        .insert(payload)
+        .select('id, total_score')
+        .single();
+      error = insertError;
+      if (data) {
+        setBracketId(data.id);
+        setTotalScore(data.total_score);
       }
-    };
-    reader.readAsText(file);
+    }
+
+    setSaving(false);
+    setSaveStatus(error ? 'error' : 'saved');
+    if (error) console.error('Save failed:', error);
+
+    // Reset status after 3s
+    setTimeout(() => setSaveStatus('idle'), 3000);
   };
+
+  const handleLoadBracket = async () => {
+    const name = prompt('Enter the bracket name to load:');
+    if (!name) return;
+
+    const { data, error } = await supabase
+      .from('brackets')
+      .select('*')
+      .ilike('name', name)
+      .order('updated_at', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (error || !data) {
+      alert(`No bracket found with name "${name}"`);
+      return;
+    }
+
+    const saved: SavedBracket = { name: data.name, picks: data.picks };
+    const newMatchups = createInitialBracket(tournamentData, saved);
+    setMatchups(newMatchups);
+    setBracketName(data.name);
+    setBracketId(data.id);
+    setTiebreakerScore(data.tiebreaker?.toString() ?? '');
+    setTotalScore(data.total_score);
+  };
+
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', fontFamily: 'system-ui' }}>
+        Loading results...
+      </div>
+    );
+  }
 
   return (
-    <Container
-      maxWidth={false}
-      sx={{
-        px: 2,
-        mx: "auto",
-        width: "100%",
-        maxWidth: "100%",
-        position: "relative",
-        zIndex: 1,
-      }}
-    >
-      <Typography
-        variant="h4"
-        component="h1"
-        gutterBottom
-        sx={{ textAlign: "center", my: 4 }}
-      >
-        March Madness Bracket
-      </Typography>
-      <Box
-        sx={{
-          width: "100%",
-          minWidth: "fit-content",
-          overflowX: "auto",
-          mb: 4,
-        }}
-      >
+    <div style={{ width: '100%' }}>
+      <h1 style={{ textAlign: 'center', fontFamily: 'system-ui', margin: '16px 0', fontSize: 22 }}>
+        2026 March Madness Bracket
+      </h1>
+
+      {/* Save / Load controls */}
+      <div style={{ display: 'flex', justifyContent: 'center', gap: 12, marginBottom: 12, fontFamily: 'system-ui' }}>
+        <button
+          onClick={handleSaveBracket}
+          disabled={saving}
+          style={{ padding: '6px 18px', borderRadius: 4, border: '1px solid #1a1a2e', background: '#1a1a2e', color: '#fff', cursor: saving ? 'default' : 'pointer', fontSize: 13 }}
+        >
+          {saving ? 'Saving...' : bracketId ? 'Update Bracket' : 'Save Bracket'}
+        </button>
+        <button
+          onClick={handleLoadBracket}
+          style={{ padding: '6px 18px', borderRadius: 4, border: '1px solid #1a1a2e', background: '#fff', color: '#1a1a2e', cursor: 'pointer', fontSize: 13 }}
+        >
+          Load Bracket
+        </button>
+        {saveStatus === 'saved' && <span style={{ color: '#2a7a2a', fontSize: 13, alignSelf: 'center' }}>✓ Saved</span>}
+        {saveStatus === 'error' && <span style={{ color: '#b00000', fontSize: 13, alignSelf: 'center' }}>Save failed</span>}
+      </div>
+
+      <div style={{ width: '100%', overflowX: 'auto' }}>
         <BracketDisplay
           initialMatchups={matchups}
           onUpdateBracket={handleUpdateBracket}
@@ -192,43 +228,11 @@ export default function App() {
           totalScore={totalScore}
           useTestData={useTestData}
           onUpdateUseTestData={setUseTestData}
+          games={games}
+          tiebreakerScore={tiebreakerScore}
+          onUpdateTiebreakerScore={setTiebreakerScore}
         />
-      </Box>
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "center",
-          gap: 2,
-          mt: 4,
-          mb: 4,
-          position: "relative",
-          zIndex: 2,
-        }}
-      >
-        <Button
-          variant="contained"
-          color="primary"
-          onClick={handleSaveBracket}
-          sx={{ minWidth: "120px" }}
-        >
-          Save Bracket
-        </Button>
-        <Button
-          variant="contained"
-          color="secondary"
-          onClick={handleLoadBracket}
-          sx={{ minWidth: "120px" }}
-        >
-          Load Bracket
-        </Button>
-      </Box>
-      <input
-        type="file"
-        ref={fileInputRef}
-        onChange={handleFileChange}
-        accept=".json"
-        style={{ display: "none" }}
-      />
-    </Container>
+      </div>
+    </div>
   );
 }

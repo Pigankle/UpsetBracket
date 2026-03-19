@@ -1,35 +1,11 @@
 import { useState, useEffect } from 'react';
 import type { Team, Matchup } from '../utils/bracketTransform';
 import { gameCodeToIndex, gameFlowMap } from '../utils/bracketTransform';
-import marchMadnessGames from '../data/march_madness_games.json';
-import marchMadnessGamesTest from '../data/march_madness_games_TEST_DATA.json';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-interface MarchMadnessGame {
-  GameID: number;
-  Round: number;
-  'Game Number': number;
-  'Top Team': string | number;
-  'Bottom Team': string | number;
-  'Top Team Score': number;
-  'Bottom Team Score': number;
-  'Winning Team': string | number;
-  'Losing Team': string | number;
-  'Winning Team Seed': number | null;
-  'Losing Team Seed': number | null;
-  'Winning Team Score': number;
-  'Losing Team Score': number;
-  'Game Status': string;
-  'Top Team Seed': number;
-  'Bottom Team Seed': number;
-  'Game Region': string;
-  'Top Team Char6': string;
-  'Bottom Team Char6': string;
-  'Winning Team Char6': string;
-  'Losing Team Char6': string;
-  points: number;
-}
+type GameRecord = Record<string, unknown>;
+type GamesMap = Record<string, GameRecord>;
 
 interface BracketDisplayProps {
   initialMatchups: Matchup[];
@@ -39,6 +15,9 @@ interface BracketDisplayProps {
   totalScore: number;
   useTestData: boolean;
   onUpdateUseTestData: (useTestData: boolean) => void;
+  games: Record<string, Record<string, unknown>>;
+  tiebreakerScore: string;
+  onUpdateTiebreakerScore: (s: string) => void;
 }
 
 // ─── Layout constants ─────────────────────────────────────────────────────────
@@ -108,7 +87,7 @@ interface TeamRowProps {
   isWinner: boolean;
   gameCode: string;
   round: number;
-  games: Record<string, MarchMadnessGame>;
+  games: GamesMap;
   onClick: () => void;
 }
 
@@ -179,7 +158,7 @@ interface MatchupCardProps {
   matchup: Matchup;
   top: number;
   round: number;
-  games: Record<string, MarchMadnessGame>;
+  games: GamesMap;
   onPick: (code: string, pos: 'top' | 'bottom') => void;
   showGameCode: boolean;
 }
@@ -189,7 +168,7 @@ function MatchupCard({ matchup, top, round, games, onPick, showGameCode }: Match
   let pts: number | null = null;
   if (matchup.winner && result) {
     const w = matchup.winner === 'top' ? matchup.topTeam : matchup.bottomTeam;
-    if (result['Winning Team'] === w.name) pts = result.points ?? 0;
+    if (result['Winning Team'] === w.name) pts = (result.points as number) ?? 0;
     else pts = 0;
   }
 
@@ -315,7 +294,7 @@ interface RoundColumnProps {
   matchups: Matchup[];
   roundIdx: number;
   label: string;
-  games: Record<string, MarchMadnessGame>;
+  games: GamesMap;
   onPick: (code: string, pos: 'top' | 'bottom') => void;
   showGameCode: boolean;
 }
@@ -433,8 +412,8 @@ function Region({ name, matchups, games, onPick, dir, showGameCode }: RegionProp
 // ─── FinalFourCenter ──────────────────────────────────────────────────────────
 
 interface FinalFourCenterProps {
-  matchups: Matchup[]; // [FF1(idx60), FF2(idx61), CH1(idx62)]  — see note below
-  games: Record<string, MarchMadnessGame>;
+  matchups: Matchup[];
+  games: GamesMap;
   onPick: (code: string, pos: 'top' | 'bottom') => void;
   bracketName: string;
   onUpdateBracketName: (n: string) => void;
@@ -453,14 +432,14 @@ function FinalCard({
 }: {
   matchup: Matchup;
   round: number;
-  games: Record<string, MarchMadnessGame>;
+  games: GamesMap;
   onPick: (code: string, pos: 'top' | 'bottom') => void;
 }) {
   const result = games[matchup.gameCode];
   let pts: number | null = null;
   if (matchup.winner && result) {
     const w = matchup.winner === 'top' ? matchup.topTeam : matchup.bottomTeam;
-    pts = result['Winning Team'] === w.name ? (result.points ?? 0) : 0;
+    pts = result['Winning Team'] === w.name ? ((result.points as number) ?? 0) : 0;
   }
 
   return (
@@ -596,7 +575,7 @@ function FinalFourCenter({ matchups, games, onPick, bracketName, onUpdateBracket
 
 // ─── Scoring helpers ──────────────────────────────────────────────────────────
 
-function calcRoundScores(matchups: Matchup[], games: Record<string, MarchMadnessGame>) {
+function calcRoundScores(matchups: Matchup[], games: GamesMap) {
   const names = ['Round of 64', 'Round of 32', 'Sweet 16', 'Elite Eight', 'Final Four', 'Championship'];
   const scores = Array(6).fill(0);
 
@@ -610,7 +589,7 @@ function calcRoundScores(matchups: Matchup[], games: Record<string, MarchMadness
     const w = m.winner === 'top' ? m.topTeam : m.bottomTeam;
     const g = games[m.gameCode];
     if (!g || g['Winning Team'] !== w.name) return;
-    const pts = g.points ?? 0;
+    const pts = (g.points as number) ?? 0;
     if (r64.has(idx)) scores[0] += pts;
     else if (r32.has(idx)) scores[1] += pts;
     else if (s16.has(idx)) scores[2] += pts;
@@ -636,17 +615,15 @@ export default function BracketDisplay({
   totalScore,
   useTestData,
   onUpdateUseTestData,
+  games,
+  tiebreakerScore,
+  onUpdateTiebreakerScore,
 }: BracketDisplayProps) {
   const [matchups, setMatchups] = useState<Matchup[]>(initialMatchups);
   const [showGameCode, setShowGameCode] = useState(false);
-  const [tiebreakerScore, setTiebreakerScore] = useState('');
 
   useEffect(() => { setMatchups(initialMatchups); }, [initialMatchups]);
   useEffect(() => { onUpdateBracket([...matchups]); }, [useTestData]);
-
-  const games = useTestData
-    ? (marchMadnessGamesTest as unknown as Record<string, MarchMadnessGame>)
-    : (marchMadnessGames as unknown as Record<string, MarchMadnessGame>);
 
   const handlePick = (gameCode: string, position: 'top' | 'bottom') => {
     const matchupIndex = gameCodeToIndex[gameCode];
