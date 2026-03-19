@@ -169,7 +169,7 @@ export default function Leaderboard({ currentBracketId, onViewBracket }: Leaderb
         </tbody>
       </table>
       <div style={{ fontSize: 11, color: C.seed, textAlign: 'right', marginTop: 8, fontStyle: 'italic' }}>
-        Note: "Ceiling assumes your remaining picks all win, using current known opponents for upset multiplier estimates. Actual ceiling may be higher or lower depending on future matchups."
+        Note: Ceiling assumes your remaining picks all win, using current known opponents for upset multiplier estimates. Actual ceiling may be higher or lower depending on future matchups.
       </div>
     </div>
   );
