@@ -132,7 +132,7 @@ export default function Leaderboard({ currentBracketId, onViewBracket }: Leaderb
                 <td style={{ padding: '8px 10px', color: C.seed }}>
                   {i < 3 ? MEDAL[i] : i + 1}
                 </td>
-                <td style={{ padding: '8px 10px' }}>
+                <td style={{ padding: '8px 10px', color: C.text }}>
                   {visible ? `${b.person_name} — ${b.bracket_name}` : '—'}
                   {isOwn && <span style={{ fontSize: 10, color: C.seed, marginLeft: 6 }}>(you)</span>}
                 </td>
