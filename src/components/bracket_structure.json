@@ -116,13 +116,13 @@
         "matchup": "Winner of E15 vs. Winner of M15"
       },
       {
-        "game_code": "FF1",
+        "game_code": "FF2",
         "matchup": "Winner of S15 vs. Winner of W15"
       }
     ]
   },
   "championship": {
     "game_code": "CH1",
-    "matchup": "Winner of FF1 vs. Winner of FF2"
+    "matchup": "Winner of FF2 vs. Winner of FF2"
   }
 }
