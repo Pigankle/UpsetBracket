@@ -63,7 +63,7 @@ export default function Dashboard({ profile, onOpenBracket, onNewBracket }: Dash
     <div style={{ textAlign: 'center', padding: 40, fontFamily: 'system-ui', color: C.seed }}>Loading...</div>
   );
 
-  const canAddMore = !locked && (profile.is_admin || brackets.length < MAX_BRACKETS);
+  const canAddMore = profile.is_admin || (!locked && brackets.length < MAX_BRACKETS);
 
   return (
     <div style={{ maxWidth: 600, margin: '40px auto', padding: '0 16px', fontFamily: 'system-ui' }}>
