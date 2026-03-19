@@ -699,7 +699,8 @@ export default function BracketDisplay({
             totalScore={totalScore}
             useTestData={useTestData}
             tiebreakerScore={tiebreakerScore}
-            onUpdateTiebreakerScore={setTiebreakerScore}
+            onUpdateTiebreakerScore={onUpdateTiebreakerScore}
+
           />
           {/* Round scores */}
           <div style={{ marginTop: 12, fontSize: 11, color: C.text }}>
