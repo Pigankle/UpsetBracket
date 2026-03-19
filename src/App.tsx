@@ -8,10 +8,10 @@ import { createInitialBracket, Matchup, SavedBracket } from './utils/bracketTran
 import tournamentData from './data/ncaa_2025_bracket.json';
 import { supabase } from './lib/supabase';
 import { getProfile, signOut, type Profile } from './lib/auth';
+import { printBracket } from './lib/printBracket';
 import { isLocked, deadlineLabel } from './lib/deadline';
-import type { User } from '@supabase/supabase-js';
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+import type { User } from '@supabase/supabase-js';
 
 interface MarchMadnessGame {
   game_code: string;
@@ -228,10 +228,16 @@ export default function App() {
   if (view === 'view-bracket') return (
     <div style={{ minHeight: '100vh', background: '#f5f5f5', fontFamily: 'system-ui' }}>
       <Nav />
-      <div style={{ textAlign: 'center', padding: '12px 0', fontSize: 13, color: C.seed }}>
-        Viewing: <strong>{viewingBracketName}</strong> —{' '}
+      <div style={{ textAlign: 'center', padding: '12px 0', fontSize: 13, color: C.seed, display: 'flex', justifyContent: 'center', gap: 16, alignItems: 'center' }}>
+        <span>Viewing: <strong>{viewingBracketName}</strong></span>
         <button onClick={() => setView('leaderboard')} style={{ fontSize: 13, color: C.header, background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>
           Back to leaderboard
+        </button>
+        <button
+          onClick={() => printBracket(viewMatchups, games, viewingBracketName, '', calculateScore(viewMatchups, games))}
+          style={{ padding: '4px 12px', borderRadius: 4, background: '#fff', color: C.header, border: `1px solid ${C.border}`, fontSize: 12, cursor: 'pointer' }}
+        >
+          🖨 Print
         </button>
       </div>
       <div style={{ width: '100%', overflowX: 'auto' }}>
@@ -264,6 +270,12 @@ export default function App() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, padding: '10px 16px', background: '#fff', borderBottom: `1px solid ${C.border}` }}>
         <button onClick={() => setView('dashboard')} style={{ fontSize: 12, color: C.seed, background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>
           ← My Brackets
+        </button>
+        <button
+          onClick={() => printBracket(matchups, games, bracketName, profile.display_name, totalScore)}
+          style={{ padding: '6px 14px', borderRadius: 4, background: '#fff', color: C.header, border: `1px solid ${C.border}`, fontSize: 13, cursor: 'pointer' }}
+        >
+          🖨 Print
         </button>
         {canEdit ? (
           <>
