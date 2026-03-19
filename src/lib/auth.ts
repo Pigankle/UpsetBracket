@@ -7,17 +7,12 @@ export interface Profile {
 }
 
 export async function signUp(email: string, password: string, displayName: string) {
-  const { data, error } = await supabase.auth.signUp({ email, password });
-  if (error) return { error };
-  if (data.user) {
-    const { error: profileError } = await supabase.from('profiles').insert({
-      id: data.user.id,
-      display_name: displayName,
-      is_admin: false,
-    });
-    if (profileError) return { error: profileError };
-  }
-  return { error: null };
+  const { error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: { data: { display_name: displayName } },
+  });
+  return { error };
 }
 
 export async function signIn(email: string, password: string) {
