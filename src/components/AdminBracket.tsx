@@ -13,10 +13,10 @@ interface AdminBracketProps {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const CARD_H = 56;
-const CARD_GAP = 8;
-const ROUND_W = 160;
-const CONNECTOR_W = 24;
+const CARD_H = 48;
+const CARD_GAP = 6;
+const ROUND_W = 136;
+const CONNECTOR_W = 16;
 const SLOT = CARD_H + CARD_GAP;
 const REGION_H = 8 * SLOT - CARD_GAP;
 const ROUND_LABELS = ['Round of 64', 'Round of 32', 'Sweet 16', 'Elite Eight'];

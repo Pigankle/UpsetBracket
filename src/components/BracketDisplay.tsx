@@ -23,10 +23,10 @@ interface BracketDisplayProps {
 
 // ─── Layout constants ─────────────────────────────────────────────────────────
 
-const CARD_H = 56;
-const CARD_GAP = 8;
-const ROUND_W = 160;
-const CONNECTOR_W = 24;
+const CARD_H = 48;
+const CARD_GAP = 6;
+const ROUND_W = 136;
+const CONNECTOR_W = 16;
 const SLOT = CARD_H + CARD_GAP;
 
 const roundLayout = (roundIdx: number) => {
@@ -87,18 +87,17 @@ function TeamRow({ team, position, isWinner, gameCode, round, games, onClick, re
   let checkmark = '';
 
   if (result && !isTbd) {
-    const actualName = position === 'top' ? result['Top Team'] : result['Bottom Team'];
     const winnerName = result['Winning Team'];
-    const bothNull = result['Top Team'] === null && result['Bottom Team'] === null;
-    if (!bothNull && round > 0) {
-      const isFinished = result['Game Status'] === 'Final';
-      if (team.name === actualName) {
+    const isFinished = result['Game Status'] === 'Final';
+
+    if (isFinished) {
+      if (winnerName === team.name) {
         bg = C.correct; textColor = C.correctText;
-      } else if (actualName !== null && isFinished) {
+        checkmark = ' ✓';
+      } else {
         bg = C.incorrect; textColor = C.incorrectText; strike = true;
       }
     }
-    if (result['Winning Team'] === team.name && result['Game Status'] === 'Final') checkmark = ' ✓';
   }
 
   return (
@@ -141,10 +140,9 @@ interface MatchupCardProps {
 function MatchupCard({ matchup, top, round, games, onPick, showGameCode, readOnly }: MatchupCardProps) {
   const result = games[matchup.gameCode];
   let pts: number | null = null;
-  if (matchup.winner && result) {
+  if (matchup.winner && result && result['Game Status'] === 'Final') {
     const w = matchup.winner === 'top' ? matchup.topTeam : matchup.bottomTeam;
-    if (result['Winning Team'] === w.name) pts = (result.points as number) ?? 0;
-    else pts = 0;
+    pts = result['Winning Team'] === w.name ? (result.points as number) ?? 0 : 0;
   }
 
   const PTS_H = pts !== null ? 16 : 0;
@@ -305,7 +303,7 @@ function FinalCard({ matchup, round, games, onPick, readOnly }: {
 }) {
   const result = games[matchup.gameCode];
   let pts: number | null = null;
-  if (matchup.winner && result) {
+  if (matchup.winner && result && result['Game Status'] === 'Final') {
     const w = matchup.winner === 'top' ? matchup.topTeam : matchup.bottomTeam;
     pts = result['Winning Team'] === w.name ? ((result.points as number) ?? 0) : 0;
   }
