@@ -91,9 +91,12 @@ export default function App() {
   // Auth listener
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
+      console.log('session:', session);
       setUser(session?.user ?? null);
       if (session?.user) {
+        console.log('fetching profile...');
         const p = await getProfile(session.user.id);
+        console.log('profile:', p);
         setProfile(p);
       }
     });
@@ -118,7 +121,11 @@ export default function App() {
   };
 
   useEffect(() => {
-    loadResults().then(() => setLoading(false));
+    
+    loadResults().then(() => {
+      console.log('results loaded');
+      setLoading(false);
+    });
   }, []);
 
   useEffect(() => {
