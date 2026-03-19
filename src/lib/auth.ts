@@ -20,11 +20,16 @@ export async function signIn(email: string, password: string) {
   return { error };
 }
 
-export async function signOut() {
-  await supabase.auth.signOut();
+export async function resetPassword(email: string) {
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${window.location.origin}/reset-password`,
+  });
+  return { error };
 }
 
-export async function getProfile(userId: string): Promise<Profile | null> {
+export async function signOut() {
+  await supabase.auth.signOut();
+}(userId: string): Promise<Profile | null> {
   const { data } = await supabase
     .from('profiles')
     .select('*')
