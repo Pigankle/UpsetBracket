@@ -25,11 +25,11 @@ export async function signOut() {
 }
 
 export async function getProfile(userId: string): Promise<Profile | null> {
-  const { data, error } = await supabase
+  const { data } = await supabase
     .from('profiles')
     .select('*')
     .eq('id', userId)
-    .single();
-  if (error || !data) return null;
+    .maybeSingle();
+  if (!data) return null;
   return data as Profile;
 }

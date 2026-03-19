@@ -46,12 +46,12 @@ export default function AuthPage() {
           {mode === 'login' ? 'Sign in to your account.' : 'Create a new account.'}
         </p>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <form onSubmit={e => { e.preventDefault(); handleSubmit(); }} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {mode === 'register' && (
             <div>
               <label style={{ fontSize: 12, color: C.seed, display: 'block', marginBottom: 4 }}>Display name</label>
               <input style={inputStyle} value={displayName} onChange={e => setDisplayName(e.target.value)} placeholder='e.g. John Smith' />
-            </div>
+            </form>
           )}
           <div>
             <label style={{ fontSize: 12, color: C.seed, display: 'block', marginBottom: 4 }}>Email</label>
@@ -65,7 +65,7 @@ export default function AuthPage() {
           {error && <div style={{ fontSize: 12, color: C.error }}>{error}</div>}
 
           <button
-            onClick={handleSubmit}
+            type='submit'
             disabled={loading}
             style={{ padding: '10px 0', borderRadius: 4, background: C.header, color: '#fff', border: 'none', fontSize: 14, cursor: loading ? 'default' : 'pointer', opacity: loading ? 0.7 : 1, marginTop: 4 }}
           >
