@@ -160,20 +160,8 @@ function MatchupCard({ matchup, top, round, games, onPick, showGameCode, readOnl
     pts = result['Winning Team'] === w.name ? (result.points as number) ?? 0 : 0;
   }
 
-  const PTS_H = pts !== null ? 16 : 0;
-
   return (
     <div style={{ position: 'absolute', top, left: 0, width: ROUND_W }}>
-      {pts !== null && (
-        <div style={{
-          height: PTS_H, display: 'flex', alignItems: 'center',
-          justifyContent: 'flex-end', paddingRight: 4,
-          fontSize: 10, fontWeight: 700,
-          color: pts > 0 ? C.points : C.pointsNeg,
-        }}>
-          +{pts}
-        </div>
-      )}
       <div style={{
         width: ROUND_W, height: CARD_H, background: C.cardBg,
         border: `1px solid ${C.cardBorder}`, borderRadius: 6,
@@ -189,6 +177,16 @@ function MatchupCard({ matchup, top, round, games, onPick, showGameCode, readOnl
         <div style={{ height: 1, background: C.divider, flexShrink: 0 }} />
         <TeamRow team={matchup.bottomTeam} position='bottom' isWinner={matchup.winner === 'bottom'} gameCode={matchup.gameCode} round={round} games={games} onClick={() => onPick(matchup.gameCode, 'bottom')} readOnly={readOnly} eliminated={eliminated} />
       </div>
+      {pts !== null && (
+        <div style={{
+          position: 'absolute', top: -16, right: 0,
+          fontSize: 10, fontWeight: 700,
+          color: pts > 0 ? C.points : C.pointsNeg,
+          pointerEvents: 'none',
+        }}>
+          +{pts}
+        </div>
+      )}
     </div>
   );
 }
