@@ -179,10 +179,16 @@ function MatchupCard({ matchup, top, round, games, onPick, showGameCode, readOnl
       </div>
       {pts !== null && (
         <div style={{
-          position: 'absolute', top: -16, right: 0,
-          fontSize: 10, fontWeight: 700,
+          position: 'absolute', bottom: -10, right: -10,
+          fontSize: 9, fontWeight: 700,
           color: pts > 0 ? C.points : C.pointsNeg,
+          background: '#fff',
+          border: `1.5px solid ${pts > 0 ? C.points : C.pointsNeg}`,
+          borderRadius: '50%',
+          width: 22, height: 22,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
           pointerEvents: 'none',
+          zIndex: 2,
         }}>
           +{pts}
         </div>
