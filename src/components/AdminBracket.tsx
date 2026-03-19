@@ -287,8 +287,13 @@ export default function AdminBracket({ games, onResultsChanged }: AdminBracketPr
           }).eq('game_code', code)
         );
       }
-      await Promise.all(updates);
+      const results = await Promise.all(updates);
+      results.forEach((r: any, i) => {
+        if (r.error) console.error(`Update ${i} failed:`, r.error);
+        else console.log(`Update ${i} succeeded`);
+      });
       setLastSaved(`${gameCode}: cleared`);
+
     } else {
       // Set winner
       updates.push(
@@ -310,9 +315,13 @@ export default function AdminBracket({ games, onResultsChanged }: AdminBracketPr
           supabase.from('results').update(nextUpdate).eq('game_code', nextInfo.nextGame)
         );
       }
-      await Promise.all(updates);
-      setLastSaved(`${gameCode}: ${winner}`);
-    }
+      const results = await Promise.all(updates);
+      results.forEach((r: any, i) => {
+        if (r.error) console.error(`Update ${i} failed:`, r.error);
+        else console.log(`Update ${i} succeeded`);
+      });
+      setLastSaved(`${gameCode}: cleared`);
+
 
     setSaving(null);
     onResultsChanged();
