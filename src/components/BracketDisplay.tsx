@@ -42,6 +42,15 @@ const cardTop = (roundIdx: number, cardIdx: number) => {
 
 const REGION_H = 8 * SLOT - CARD_GAP;
 
+// ─── Scoring helper ───────────────────────────────────────────────────────────
+
+function calcPts(g: GameRecord): number {
+  const winnerSeed = g['Winning Team Seed'] as number ?? 0;
+  const loserSeed = g['Losing Team Seed'] as number ?? 0;
+  const multiplier = Math.max(1, winnerSeed - loserSeed);
+  return (g.points as number) * multiplier;
+}
+
 // ─── Colours ──────────────────────────────────────────────────────────────────
 
 const C = {
@@ -64,7 +73,8 @@ const C = {
   roundLabel: '#888888',
 };
 
-// Build set of eliminated teams from all final game results
+// ─── Eliminated teams ─────────────────────────────────────────────────────────
+
 function buildEliminatedTeams(games: GamesMap): Set<string> {
   const eliminated = new Set<string>();
   for (const g of Object.values(games)) {
@@ -99,11 +109,9 @@ function TeamRow({ team, position, isWinner, gameCode, round, games, onClick, re
   let checkmark = '';
 
   if (!isTbd) {
-    // If team is eliminated (lost any previous game), always show red
     if (eliminated.has(team.name)) {
       bg = C.incorrect; textColor = C.incorrectText; strike = true;
     }
-    // Check current game result
     if (result && result['Game Status'] === 'Final') {
       if (result['Winning Team'] === team.name) {
         bg = C.correct; textColor = C.correctText; strike = false;
@@ -158,7 +166,7 @@ function MatchupCard({ matchup, top, round, games, onPick, showGameCode, readOnl
   let pts: number | null = null;
   if (matchup.winner && result && result['Game Status'] === 'Final') {
     const w = matchup.winner === 'top' ? matchup.topTeam : matchup.bottomTeam;
-    pts = result['Winning Team'] === w.name ? (result.points as number) ?? 0 : 0;
+    pts = result['Winning Team'] === w.name ? calcPts(result) : 0;
   }
 
   return (
@@ -330,7 +338,7 @@ function FinalCard({ matchup, round, games, onPick, readOnly, eliminated }: {
   let pts: number | null = null;
   if (matchup.winner && result && result['Game Status'] === 'Final') {
     const w = matchup.winner === 'top' ? matchup.topTeam : matchup.bottomTeam;
-    pts = result['Winning Team'] === w.name ? ((result.points as number) ?? 0) : 0;
+    pts = result['Winning Team'] === w.name ? calcPts(result) : 0;
   }
 
   return (
@@ -375,11 +383,9 @@ function FinalFourCenter({ matchups, games, onPick, bracketName, onUpdateBracket
         disabled={readOnly}
         style={{ border: `1px solid ${C.cardBorder}`, borderRadius: 4, padding: '4px 8px', fontSize: 12, marginBottom: 12, width: '100%', boxSizing: 'border-box', outline: 'none', color: C.text, background: readOnly ? '#f5f5f5' : '#fff' }}
       />
-
       <div style={{ fontSize: 11, fontWeight: 700, color: C.headerText, background: C.header, padding: '3px 10px', borderRadius: 4, marginBottom: 10, letterSpacing: '0.05em', width: '100%', textAlign: 'center', boxSizing: 'border-box' }}>
         FINAL FOUR
       </div>
-
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 16, width: '100%', alignItems: 'center' }}>
         <div>
           <div style={{ fontSize: 9, color: C.roundLabel, textAlign: 'center', marginBottom: 4 }}>{ff1.gameCode}</div>
@@ -390,13 +396,10 @@ function FinalFourCenter({ matchups, games, onPick, bracketName, onUpdateBracket
           <FinalCard matchup={ff2} round={3} games={games} onPick={onPick} readOnly={readOnly} eliminated={eliminated} />
         </div>
       </div>
-
       <div style={{ fontSize: 11, fontWeight: 700, color: C.headerText, background: C.header, padding: '3px 10px', borderRadius: 4, marginBottom: 10, letterSpacing: '0.05em', width: '100%', textAlign: 'center', boxSizing: 'border-box' }}>
         CHAMPIONSHIP
       </div>
-
       <FinalCard matchup={ch} round={4} games={games} onPick={onPick} readOnly={readOnly} eliminated={eliminated} />
-
       {ch.winner && (
         <div style={{ marginTop: 10, textAlign: 'center' }}>
           <div style={{ fontSize: 10, color: C.roundLabel }}>🏆 Champion</div>
@@ -405,7 +408,6 @@ function FinalFourCenter({ matchups, games, onPick, bracketName, onUpdateBracket
           </div>
         </div>
       )}
-
       <div style={{ marginTop: 12, width: '100%', borderTop: `1px solid ${C.divider}`, paddingTop: 10 }}>
         <div style={{ fontSize: 11, fontWeight: 700, color: C.text, marginBottom: 6 }}>Tiebreaker</div>
         <div style={{ fontSize: 10, color: C.seed, marginBottom: 6 }}>Predicted final game total score</div>
@@ -418,7 +420,6 @@ function FinalFourCenter({ matchups, games, onPick, bracketName, onUpdateBracket
           style={{ border: `1px solid ${C.cardBorder}`, borderRadius: 4, padding: '4px 8px', fontSize: 12, width: '100%', boxSizing: 'border-box', outline: 'none', color: C.text, background: readOnly ? '#f5f5f5' : '#fff' }}
         />
       </div>
-
       <div style={{ marginTop: 16, width: '100%', fontSize: 11, color: C.text, borderTop: `1px solid ${C.divider}`, paddingTop: 10 }}>
         <div style={{ fontWeight: 700, marginBottom: 6 }}>Scores by Round</div>
         {useTestData && <div style={{ color: C.incorrectText, fontWeight: 700, fontSize: 10, marginBottom: 6 }}>⚠ SCORING BASED ON TEST DATA</div>}
@@ -441,8 +442,8 @@ function calcRoundScores(matchups: Matchup[], games: GamesMap) {
     if (!m.winner) return;
     const w = m.winner === 'top' ? m.topTeam : m.bottomTeam;
     const g = games[m.gameCode];
-    if (!g || g['Winning Team'] !== w.name) return;
-    const pts = (g.points as number) ?? 0;
+    if (!g || g['Winning Team'] !== w.name || g['Game Status'] !== 'Final') return;
+    const pts = calcPts(g);
     if (r64.has(idx)) scores[0] += pts;
     else if (r32.has(idx)) scores[1] += pts;
     else if (s16.has(idx)) scores[2] += pts;
@@ -514,18 +515,15 @@ export default function BracketDisplay({
   const ch1 = matchups.find(m => m.gameCode === 'CH1')!;
   const ffMid = [ff1, ff2, ch1];
   const eliminated = buildEliminatedTeams(games);
-
   const roundScores = calcRoundScores(matchups, games);
 
   return (
     <div style={{ background: C.bg, minHeight: '100vh', padding: 16, fontFamily: 'system-ui, sans-serif' }}>
       <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'flex-start', gap: 0, overflowX: 'auto' }}>
-
         <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
           <Region name='East'  matchups={east}  games={games} onPick={handlePick} dir='ltr' showGameCode={showGameCode} readOnly={readOnly} eliminated={eliminated} />
           <Region name='South' matchups={south} games={games} onPick={handlePick} dir='ltr' showGameCode={showGameCode} readOnly={readOnly} eliminated={eliminated} />
         </div>
-
         <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignSelf: 'center', padding: '0 16px' }}>
           <FinalFourCenter
             matchups={ffMid} games={games} onPick={handlePick}
@@ -543,13 +541,11 @@ export default function BracketDisplay({
             ))}
           </div>
         </div>
-
         <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
           <Region name='West'    matchups={west}    games={games} onPick={handlePick} dir='rtl' showGameCode={showGameCode} readOnly={readOnly} eliminated={eliminated} />
           <Region name='Midwest' matchups={midwest} games={games} onPick={handlePick} dir='rtl' showGameCode={showGameCode} readOnly={readOnly} eliminated={eliminated} />
         </div>
       </div>
-
       <div style={{ marginTop: 16, display: 'flex', gap: 16, alignItems: 'center', fontSize: 12 }}>
         <label style={{ display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer' }}>
           <input type='checkbox' checked={showGameCode} onChange={e => setShowGameCode(e.target.checked)} />
