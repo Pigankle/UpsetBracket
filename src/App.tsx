@@ -1,332 +1,387 @@
-import { useState } from 'react';
-import { supabase } from '../lib/supabase';
-import { gameCodeToIndex } from '../utils/bracketTransform';
-import type { Matchup } from '../utils/bracketTransform';
+import { useState, useEffect } from 'react';
+import BracketDisplay from './components/BracketDisplay';
+import Leaderboard from './components/Leaderboard';
+import AdminBracket from './components/AdminBracket';
+import { createInitialBracket, Matchup, SavedBracket } from './utils/bracketTransform';
+import tournamentData from './data/ncaa_2025_bracket.json';
+import { supabase } from './lib/supabase';
+import { isLocked, deadlineLabel } from './lib/deadline';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type GamesMap = Record<string, Record<string, unknown>>;
-
-interface AdminBracketProps {
-  matchups: Matchup[];       // bracket structure (teams)
-  games: GamesMap;           // current results from Supabase
-  onResultsChanged: () => void; // callback to reload results in parent
+interface MarchMadnessGame {
+  game_code: string;
+  top_team: string;
+  bottom_team: string;
+  winning_team: string | null;
+  losing_team: string | null;
+  top_team_seed: number;
+  bottom_team_seed: number;
+  winning_team_seed: number | null;
+  losing_team_seed: number | null;
+  winning_team_score: number | null;
+  losing_team_score: number | null;
+  top_team_score: number | null;
+  bottom_team_score: number | null;
+  game_status: string;
+  game_region: string;
+  top_team_char6: string;
+  bottom_team_char6: string;
+  winning_team_char6: string;
+  losing_team_char6: string;
+  points: number;
 }
 
-// ─── Constants ────────────────────────────────────────────────────────────────
+type View = 'landing' | 'bracket' | 'leaderboard' | 'view-bracket' | 'admin';
 
-const CARD_H = 56;
-const CARD_GAP = 8;
-const ROUND_W = 160;
-const CONNECTOR_W = 24;
-const SLOT = CARD_H + CARD_GAP;
-const REGION_H = 8 * SLOT - CARD_GAP;
-const ROUND_LABELS = ['Round of 64', 'Round of 32', 'Sweet 16', 'Elite Eight'];
+function adaptGame(g: MarchMadnessGame): Record<string, unknown> {
+  return {
+    'Top Team': g.top_team,
+    'Bottom Team': g.bottom_team,
+    'Winning Team': g.winning_team,
+    'Losing Team': g.losing_team,
+    'Top Team Seed': g.top_team_seed,
+    'Bottom Team Seed': g.bottom_team_seed,
+    'Winning Team Seed': g.winning_team_seed,
+    'Losing Team Seed': g.losing_team_seed,
+    'Winning Team Score': g.winning_team_score,
+    'Losing Team Score': g.losing_team_score,
+    'Top Team Score': g.top_team_score,
+    'Bottom Team Score': g.bottom_team_score,
+    'Game Status': g.game_status,
+    'Game Region': g.game_region,
+    'Top Team Char6': g.top_team_char6,
+    'Bottom Team Char6': g.bottom_team_char6,
+    'Winning Team Char6': g.winning_team_char6,
+    'Losing Team Char6': g.losing_team_char6,
+    points: g.points,
+  };
+}
 
-const roundLayout = (r: number) => ({ count: 8 >> r, stride: SLOT * (1 << r) });
-const cardTop = (r: number, i: number) => { const { stride } = roundLayout(r); return i * stride + (stride - CARD_H) / 2; };
+function matchupsToSavedBracket(matchups: Matchup[], name: string): SavedBracket {
+  const picks: Record<string, string> = {};
+  matchups.forEach(m => {
+    if (m.gameCode && m.winner) {
+      picks[m.gameCode] = m.winner === 'top' ? m.topTeam.name : m.bottomTeam.name;
+    }
+  });
+  return { name, picks };
+}
+
+function calculateScore(matchups: Matchup[], games: Record<string, Record<string, unknown>>): number {
+  let score = 0;
+  matchups.forEach(m => {
+    if (!m.gameCode || !m.winner) return;
+    const g = games[m.gameCode];
+    if (!g) return;
+    const picked = m.winner === 'top' ? m.topTeam.name : m.bottomTeam.name;
+    if (picked === g['Winning Team']) score += (g.points as number);
+  });
+  return score;
+}
+
+// ─── Styles ───────────────────────────────────────────────────────────────────
 
 const C = {
-  bg: '#f5f5f5', cardBg: '#fff', cardBorder: '#d0d0d0', divider: '#e0e0e0',
-  text: '#1a1a1a', seed: '#666', header: '#1a1a2e', headerText: '#fff',
-  roundLabel: '#888', winner: 'rgba(34,139,34,0.15)', winnerText: '#1a6e1a',
-  pending: '#fff8e1', connectorLine: '#b0b0b0',
+  header: '#1a1a2e',
+  headerText: '#ffffff',
+  border: '#d0d0d0',
+  text: '#1a1a1a',
+  seed: '#666',
 };
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// ─── App ──────────────────────────────────────────────────────────────────────
 
-// Resolve what team is actually in a slot given current results
-function resolveTeam(matchups: Matchup[], games: GamesMap, gameCode: string, position: 'top' | 'bottom'): { name: string; seed: number | null } {
-  const idx = gameCodeToIndex[gameCode];
-  const matchup = matchups[idx];
-  if (!matchup) return { name: 'TBD', seed: null };
-  const team = position === 'top' ? matchup.topTeam : matchup.bottomTeam;
-  // If team was propagated from picks, use it; otherwise fall back to games table
-  const g = games[gameCode];
-  const nameFromGames = g ? (position === 'top' ? g['top_team'] : g['bottom_team']) as string : null;
-  const name = team.name !== 'TBD' ? team.name : (nameFromGames ?? 'TBD');
-  const seed = team.seed && team.seed !== '-' ? Number(team.seed) : null;
-  return { name, seed };
-}
+export default function App() {
+  const [view, setView] = useState<View>('landing');
+  const [bracketId, setBracketId] = useState<string | null>(null);
+  const [viewingBracketId, setViewingBracketId] = useState<string | null>(null);
+  const [bracketName, setBracketName] = useState('');
+  const [tiebreakerScore, setTiebreakerScore] = useState('');
+  const [useTestData, setUseTestData] = useState(false);
+  const [matchups, setMatchups] = useState<Matchup[]>(() => createInitialBracket(tournamentData));
+  const [viewMatchups, setViewMatchups] = useState<Matchup[]>(() => createInitialBracket(tournamentData));
+  const [totalScore, setTotalScore] = useState(0);
+  const [games, setGames] = useState<Record<string, Record<string, unknown>>>({});
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saved' | 'error'>('idle');
 
-// ─── TeamRow ──────────────────────────────────────────────────────────────────
+  const [adminUnlocked, setAdminUnlocked] = useState(false);
+  const locked = isLocked() && !adminUnlocked;
 
-function AdminTeamRow({ name, seed, isWinner, isTbd, onClick }: {
-  name: string; seed: number | null; isWinner: boolean; isTbd: boolean; onClick: () => void;
-}) {
-  return (
-    <div
-      onClick={isTbd ? undefined : onClick}
-      style={{
-        display: 'flex', alignItems: 'center', gap: 6,
-        padding: '0 8px', height: 26,
-        background: isWinner ? C.winner : 'transparent',
-        cursor: isTbd ? 'default' : 'pointer',
-        userSelect: 'none',
-      }}
-    >
-      <span style={{ fontSize: 10, color: C.seed, minWidth: 14, textAlign: 'right', flexShrink: 0 }}>
-        {seed ?? ''}
-      </span>
-      <span style={{
-        fontSize: 12, color: isWinner ? C.winnerText : isTbd ? C.seed : C.text,
-        fontWeight: isWinner ? 700 : 400,
-        whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-      }}>
-        {name}{isWinner ? ' ✓' : ''}
-      </span>
-    </div>
-  );
-}
-
-// ─── MatchupCard ──────────────────────────────────────────────────────────────
-
-function AdminMatchupCard({ gameCode, matchups, games, onPick, saving, top }: {
-  gameCode: string; matchups: Matchup[]; games: GamesMap;
-  onPick: (gameCode: string, winner: string, loser: string) => void;
-  saving: string | null; top: number;
-}) {
-  const g = games[gameCode];
-  const winnerName = g ? g['Winning Team'] as string | null : null;
-  const topTeam = resolveTeam(matchups, games, gameCode, 'top');
-  const bottomTeam = resolveTeam(matchups, games, gameCode, 'bottom');
-  const isSaving = saving === gameCode;
-
-  return (
-    <div style={{ position: 'absolute', top, left: 0, width: ROUND_W }}>
-      <div style={{
-        width: ROUND_W, height: CARD_H,
-        background: isSaving ? C.pending : C.cardBg,
-        border: `1px solid ${C.cardBorder}`, borderRadius: 6,
-        overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
-        display: 'flex', flexDirection: 'column',
-        opacity: isSaving ? 0.7 : 1, transition: 'opacity 0.15s',
-      }}>
-        <AdminTeamRow
-          name={topTeam.name} seed={topTeam.seed}
-          isWinner={!!winnerName && winnerName === topTeam.name}
-          isTbd={topTeam.name === 'TBD'}
-          onClick={() => topTeam.name !== 'TBD' && bottomTeam.name !== 'TBD' &&
-            onPick(gameCode, topTeam.name, bottomTeam.name)}
-        />
-        <div style={{ height: 1, background: C.divider, flexShrink: 0 }} />
-        <AdminTeamRow
-          name={bottomTeam.name} seed={bottomTeam.seed}
-          isWinner={!!winnerName && winnerName === bottomTeam.name}
-          isTbd={bottomTeam.name === 'TBD'}
-          onClick={() => topTeam.name !== 'TBD' && bottomTeam.name !== 'TBD' &&
-            onPick(gameCode, bottomTeam.name, topTeam.name)}
-        />
-      </div>
-      <div style={{ fontSize: 9, color: C.seed, textAlign: 'center', marginTop: 2 }}>{gameCode}</div>
-    </div>
-  );
-}
-
-// ─── ConnectorSVG (reused) ────────────────────────────────────────────────────
-
-function ConnectorSVG({ fromRound, dir }: { fromRound: number; dir: 'ltr' | 'rtl' }) {
-  const { count } = roundLayout(fromRound);
-  const toRound = fromRound + 1;
-  const w = CONNECTOR_W;
-  const lines: React.ReactNode[] = [];
-  for (let i = 0; i < count; i += 2) {
-    const y1 = cardTop(fromRound, i) + CARD_H / 2;
-    const y2 = cardTop(fromRound, i + 1) + CARD_H / 2;
-    const yMid = cardTop(toRound, i / 2) + CARD_H / 2;
-    if (dir === 'ltr') {
-      lines.push(<g key={i}>
-        <line x1={0} y1={y1} x2={w/2} y2={y1} stroke={C.connectorLine} strokeWidth={1.5} />
-        <line x1={0} y1={y2} x2={w/2} y2={y2} stroke={C.connectorLine} strokeWidth={1.5} />
-        <line x1={w/2} y1={y1} x2={w/2} y2={y2} stroke={C.connectorLine} strokeWidth={1.5} />
-        <line x1={w/2} y1={yMid} x2={w} y2={yMid} stroke={C.connectorLine} strokeWidth={1.5} />
-      </g>);
-    } else {
-      lines.push(<g key={i}>
-        <line x1={w} y1={y1} x2={w/2} y2={y1} stroke={C.connectorLine} strokeWidth={1.5} />
-        <line x1={w} y1={y2} x2={w/2} y2={y2} stroke={C.connectorLine} strokeWidth={1.5} />
-        <line x1={w/2} y1={y1} x2={w/2} y2={y2} stroke={C.connectorLine} strokeWidth={1.5} />
-        <line x1={w/2} y1={yMid} x2={0} y2={yMid} stroke={C.connectorLine} strokeWidth={1.5} />
-      </g>);
-    }
-  }
-  return <svg width={w} height={REGION_H} style={{ flexShrink: 0, display: 'block', overflow: 'visible' }}>{lines}</svg>;
-}
-
-// ─── RoundColumn ──────────────────────────────────────────────────────────────
-
-function AdminRoundColumn({ gameCodes, roundIdx, label, matchups, games, onPick, saving }: {
-  gameCodes: string[]; roundIdx: number; label: string;
-  matchups: Matchup[]; games: GamesMap;
-  onPick: (gameCode: string, winner: string, loser: string) => void;
-  saving: string | null;
-}) {
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0 }}>
-      <div style={{ fontSize: 10, color: C.roundLabel, marginBottom: 4, whiteSpace: 'nowrap', fontWeight: 600, letterSpacing: '0.03em' }}>
-        {label}
-      </div>
-      <div style={{ position: 'relative', width: ROUND_W, height: REGION_H }}>
-        {gameCodes.map((code, i) => (
-          <AdminMatchupCard key={code} gameCode={code} matchups={matchups} games={games} onPick={onPick} saving={saving} top={cardTop(roundIdx, i)} />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// ─── Region ───────────────────────────────────────────────────────────────────
-
-const REGION_GAME_CODES: Record<string, string[][]> = {
-  East:    [['E1','E2','E3','E4','E5','E6','E7','E8'], ['E9','E10','E11','E12'], ['E13','E14'], ['E15']],
-  South:   [['S1','S2','S3','S4','S5','S6','S7','S8'], ['S9','S10','S11','S12'], ['S13','S14'], ['S15']],
-  West:    [['W1','W2','W3','W4','W5','W6','W7','W8'], ['W9','W10','W11','W12'], ['W13','W14'], ['W15']],
-  Midwest: [['M1','M2','M3','M4','M5','M6','M7','M8'], ['M9','M10','M11','M12'], ['M13','M14'], ['M15']],
-};
-
-function AdminRegion({ name, matchups, games, onPick, saving, dir }: {
-  name: string; matchups: Matchup[]; games: GamesMap;
-  onPick: (gameCode: string, winner: string, loser: string) => void;
-  saving: string | null; dir: 'ltr' | 'rtl';
-}) {
-  const rounds = REGION_GAME_CODES[name];
-  const columns = ROUND_LABELS.map((label, i) => (
-    <AdminRoundColumn key={i} gameCodes={rounds[i]} roundIdx={i} label={label} matchups={matchups} games={games} onPick={onPick} saving={saving} />
-  ));
-
-  const children: React.ReactNode[] = [];
-  if (dir === 'ltr') {
-    columns.forEach((col, i) => {
-      children.push(col);
-      if (i < 3) children.push(
-        <div key={`c${i}`} style={{ display: 'flex', alignItems: 'flex-start', paddingTop: 18 }}>
-          <ConnectorSVG fromRound={i} dir='ltr' />
-        </div>
-      );
-    });
-  } else {
-    [...columns].reverse().forEach((col, i) => {
-      children.push(col);
-      if (i < 3) children.push(
-        <div key={`c${i}`} style={{ display: 'flex', alignItems: 'flex-start', paddingTop: 18 }}>
-          <ConnectorSVG fromRound={3 - i - 1} dir='rtl' />
-        </div>
-      );
-    });
-  }
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: dir === 'ltr' ? 'flex-start' : 'flex-end' }}>
-      <div style={{ fontSize: 11, fontWeight: 700, color: C.headerText, background: C.header, padding: '3px 10px', borderRadius: 4, marginBottom: 8, letterSpacing: '0.05em', alignSelf: 'stretch', textAlign: 'center' }}>
-        {name.toUpperCase()}
-      </div>
-      <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'flex-start' }}>{children}</div>
-    </div>
-  );
-}
-
-// ─── FinalFour ────────────────────────────────────────────────────────────────
-
-function AdminFinalFour({ matchups, games, onPick, saving }: {
-  matchups: Matchup[]; games: GamesMap;
-  onPick: (gameCode: string, winner: string, loser: string) => void;
-  saving: string | null;
-}) {
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 200, padding: '0 16px', gap: 12 }}>
-      <div style={{ fontSize: 11, fontWeight: 700, color: C.headerText, background: C.header, padding: '3px 10px', borderRadius: 4, letterSpacing: '0.05em', width: '100%', textAlign: 'center', boxSizing: 'border-box' }}>
-        FINAL FOUR
-      </div>
-      {['FF1', 'FF2'].map(code => {
-        const g = games[code];
-        const winner = g ? g['Winning Team'] as string | null : null;
-        const top = resolveTeam(matchups, games, code, 'top');
-        const bottom = resolveTeam(matchups, games, code, 'bottom');
-        const isSaving = saving === code;
-        return (
-          <div key={code} style={{ width: ROUND_W }}>
-            <div style={{ fontSize: 9, color: C.seed, textAlign: 'center', marginBottom: 4 }}>{code}</div>
-            <div style={{ width: ROUND_W, height: CARD_H, background: isSaving ? C.pending : C.cardBg, border: `1px solid ${C.cardBorder}`, borderRadius: 6, overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', display: 'flex', flexDirection: 'column', opacity: isSaving ? 0.7 : 1 }}>
-              <AdminTeamRow name={top.name} seed={top.seed} isWinner={!!winner && winner === top.name} isTbd={top.name === 'TBD'} onClick={() => top.name !== 'TBD' && bottom.name !== 'TBD' && onPick(code, top.name, bottom.name)} />
-              <div style={{ height: 1, background: C.divider }} />
-              <AdminTeamRow name={bottom.name} seed={bottom.seed} isWinner={!!winner && winner === bottom.name} isTbd={bottom.name === 'TBD'} onClick={() => top.name !== 'TBD' && bottom.name !== 'TBD' && onPick(code, bottom.name, top.name)} />
-            </div>
-          </div>
-        );
-      })}
-
-      <div style={{ fontSize: 11, fontWeight: 700, color: C.headerText, background: C.header, padding: '3px 10px', borderRadius: 4, letterSpacing: '0.05em', width: '100%', textAlign: 'center', boxSizing: 'border-box' }}>
-        CHAMPIONSHIP
-      </div>
-      {(() => {
-        const code = 'CH1';
-        const g = games[code];
-        const winner = g ? g['Winning Team'] as string | null : null;
-        const top = resolveTeam(matchups, games, code, 'top');
-        const bottom = resolveTeam(matchups, games, code, 'bottom');
-        const isSaving = saving === code;
-        return (
-          <div style={{ width: ROUND_W }}>
-            <div style={{ width: ROUND_W, height: CARD_H, background: isSaving ? C.pending : C.cardBg, border: `2px solid ${C.header}`, borderRadius: 6, overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', display: 'flex', flexDirection: 'column', opacity: isSaving ? 0.7 : 1 }}>
-              <AdminTeamRow name={top.name} seed={top.seed} isWinner={!!winner && winner === top.name} isTbd={top.name === 'TBD'} onClick={() => top.name !== 'TBD' && bottom.name !== 'TBD' && onPick(code, top.name, bottom.name)} />
-              <div style={{ height: 1, background: C.divider }} />
-              <AdminTeamRow name={bottom.name} seed={bottom.seed} isWinner={!!winner && winner === bottom.name} isTbd={bottom.name === 'TBD'} onClick={() => top.name !== 'TBD' && bottom.name !== 'TBD' && onPick(code, bottom.name, top.name)} />
-            </div>
-            {winner && <div style={{ textAlign: 'center', marginTop: 8, fontSize: 13, fontWeight: 700 }}>🏆 {winner}</div>}
-          </div>
-        );
-      })()}
-    </div>
-  );
-}
-
-// ─── Main ─────────────────────────────────────────────────────────────────────
-
-export default function AdminBracket({ matchups, games, onResultsChanged }: AdminBracketProps) {
-  const [saving, setSaving] = useState<string | null>(null);
-  const [lastSaved, setLastSaved] = useState<string | null>(null);
-
-  const handlePick = async (gameCode: string, winner: string, loser: string) => {
-    const confirm = window.confirm(`Mark ${winner} as winner of ${gameCode}?`);
-    if (!confirm) return;
-
-    setSaving(gameCode);
-    const { error } = await supabase
-      .from('results')
-      .update({ winning_team: winner, losing_team: loser, game_status: 'Final' })
-      .eq('game_code', gameCode);
-
-    setSaving(null);
-    if (error) {
-      console.error('Failed to save result:', error);
-      alert('Save failed — check console.');
-    } else {
-      setLastSaved(`${gameCode}: ${winner}`);
-      onResultsChanged();
-    }
+  const loadResults = async () => {
+    const { data, error } = await supabase.from('results').select('*');
+    if (error) { console.error('Failed to load results:', error); return; }
+    const adapted: Record<string, Record<string, unknown>> = {};
+    (data as MarchMadnessGame[]).forEach(g => { adapted[g.game_code] = adaptGame(g); });
+    setGames(adapted);
   };
 
-  return (
-    <div style={{ background: C.bg, minHeight: '100vh', padding: 16, fontFamily: 'system-ui' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 12 }}>
-        <h2 style={{ margin: 0, fontSize: 16, color: C.header }}>Admin — Enter Results</h2>
-        <span style={{ fontSize: 12, color: C.seed }}>Click a team to mark them as the winner.</span>
-        {lastSaved && <span style={{ fontSize: 12, color: '#2a7a2a' }}>✓ Saved: {lastSaved}</span>}
-      </div>
+  // Load results from Supabase on mount
+  useEffect(() => {
+    async function init() {
+      await loadResults();
+      setLoading(false);
+    }
+    init();
+  }, []);
 
-      <div style={{ overflowX: 'auto' }}>
-        <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'flex-start', gap: 0 }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
-            <AdminRegion name='East'  matchups={matchups} games={games} onPick={handlePick} saving={saving} dir='ltr' />
-            <AdminRegion name='South' matchups={matchups} games={games} onPick={handlePick} saving={saving} dir='ltr' />
-          </div>
-          <AdminFinalFour matchups={matchups} games={games} onPick={handlePick} saving={saving} />
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
-            <AdminRegion name='West'    matchups={matchups} games={games} onPick={handlePick} saving={saving} dir='rtl' />
-            <AdminRegion name='Midwest' matchups={matchups} games={games} onPick={handlePick} saving={saving} dir='rtl' />
-          </div>
+  useEffect(() => {
+    setTotalScore(calculateScore(matchups, games));
+  }, [matchups, games]);
+
+  const handleUpdateBracket = (newMatchups: Matchup[]) => setMatchups(newMatchups);
+
+  const handleNewBracket = () => {
+    setBracketId(null);
+    setMatchups(createInitialBracket(tournamentData));
+    setBracketName('');
+    setTiebreakerScore('');
+    setTotalScore(0);
+    setView('bracket');
+  };
+
+  const handleLoadBracket = async (id: string) => {
+    const { data, error } = await supabase
+      .from('brackets')
+      .select('*')
+      .eq('id', id)
+      .single();
+    if (error || !data) { alert('Failed to load bracket.'); return; }
+    const saved: SavedBracket = { name: data.name, picks: data.picks };
+    setMatchups(createInitialBracket(tournamentData, saved));
+    setBracketName(data.name);
+    setBracketId(data.id);
+    setTiebreakerScore(data.tiebreaker?.toString() ?? '');
+    setTotalScore(data.total_score);
+    setView('bracket');
+  };
+
+  const handleViewBracket = async (id: string) => {
+    const { data, error } = await supabase
+      .from('brackets')
+      .select('*')
+      .eq('id', id)
+      .single();
+    if (error || !data) { alert('Failed to load bracket.'); return; }
+    const saved: SavedBracket = { name: data.name, picks: data.picks };
+    setViewMatchups(createInitialBracket(tournamentData, saved));
+    setViewingBracketId(id);
+    setView('view-bracket');
+  };
+
+  const handleSaveBracket = async () => {
+    if (locked) return;
+    setSaving(true);
+    setSaveStatus('idle');
+    const saved = matchupsToSavedBracket(matchups, bracketName);
+    const payload = {
+      name: bracketName,
+      picks: saved.picks,
+      tiebreaker: tiebreakerScore ? parseInt(tiebreakerScore) : null,
+    };
+    let error;
+    if (bracketId) {
+      ({ error } = await supabase.from('brackets').update(payload).eq('id', bracketId));
+    } else {
+      const { data, error: insertError } = await supabase
+        .from('brackets').insert(payload).select('id, total_score').single();
+      error = insertError;
+      if (data) { setBracketId(data.id); setTotalScore(data.total_score); }
+    }
+    setSaving(false);
+    setSaveStatus(error ? 'error' : 'saved');
+    if (error) console.error('Save failed:', error);
+    setTimeout(() => setSaveStatus('idle'), 3000);
+  };
+
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', fontFamily: 'system-ui' }}>
+        Loading...
+      </div>
+    );
+  }
+
+  // ── Nav ────────────────────────────────────────────────────────────────────
+
+  const Nav = () => (
+    <div style={{ background: C.header, color: C.headerText, display: 'flex', alignItems: 'center', padding: '0 16px', height: 48, gap: 8, fontFamily: 'system-ui', fontSize: 13 }}>
+      <span style={{ fontWeight: 700, fontSize: 15, marginRight: 16 }}>🏀 2026 Bracket Pool</span>
+      <NavBtn label='My Bracket' active={view === 'bracket'} onClick={() => view !== 'bracket' && setView('bracket')} />
+      <NavBtn label='New Bracket' active={false} onClick={handleNewBracket} />
+      <NavBtn label='Leaderboard' active={view === 'leaderboard' || view === 'view-bracket'} onClick={() => setView('leaderboard')} />
+      {adminUnlocked && <NavBtn label='⚙ Results' active={view === 'admin'} onClick={() => setView('admin')} />}
+      {!adminUnlocked && (
+        <span
+          onClick={() => {
+            const pw = prompt('Admin passphrase:');
+            if (pw === 'YOUR_SECRET_HERE') setAdminUnlocked(true);
+            else if (pw !== null) alert('Incorrect passphrase.');
+          }}
+          style={{ marginLeft: 'auto', fontSize: 11, opacity: 0.7, cursor: 'pointer' }}
+        >
+          {locked ? '🔒 Submissions closed' : '🔓 Admin login'}
+        </span>
+      )}
+      {adminUnlocked && (
+        <span style={{ marginLeft: 'auto', fontSize: 11, color: '#f0c040' }}>🔓 Admin mode</span>
+      )}
+    </div>
+  );
+
+  // ── Landing ────────────────────────────────────────────────────────────────
+
+  if (view === 'landing') {
+    return (
+      <div style={{ fontFamily: 'system-ui', minHeight: '100vh', background: '#f5f5f5' }}>
+        <Nav />
+        <div style={{ maxWidth: 480, margin: '80px auto', background: '#fff', borderRadius: 8, padding: 32, boxShadow: '0 2px 12px rgba(0,0,0,0.1)' }}>
+          <h2 style={{ margin: '0 0 8px', fontSize: 20, color: C.header }}>2026 March Madness Pool</h2>
+          <p style={{ margin: '0 0 24px', fontSize: 13, color: C.seed }}>
+            Deadline: {deadlineLabel}
+          </p>
+          <button
+            onClick={handleNewBracket}
+            style={{ width: '100%', padding: '10px 0', borderRadius: 5, background: C.header, color: '#fff', border: 'none', fontSize: 14, cursor: 'pointer', marginBottom: 10 }}
+          >
+            Create New Bracket
+          </button>
+          <button
+            onClick={() => setView('leaderboard')}
+            style={{ width: '100%', padding: '10px 0', borderRadius: 5, background: '#fff', color: C.header, border: `1px solid ${C.border}`, fontSize: 14, cursor: 'pointer' }}
+          >
+            View Leaderboard
+          </button>
         </div>
       </div>
+    );
+  }
+
+  // ── Admin ──────────────────────────────────────────────────────────────────
+
+  if (view === 'admin') {
+    return (
+      <div style={{ fontFamily: 'system-ui', minHeight: '100vh', background: '#f5f5f5' }}>
+        <Nav />
+        <AdminBracket
+          matchups={matchups}
+          games={games}
+          onResultsChanged={loadResults}
+        />
+      </div>
+    );
+  }
+
+  // ── Leaderboard ────────────────────────────────────────────────────────────
+
+  if (view === 'leaderboard') {
+    return (
+      <div style={{ fontFamily: 'system-ui', minHeight: '100vh', background: '#f5f5f5' }}>
+        <Nav />
+        <div style={{ padding: '24px 16px' }}>
+          <h2 style={{ textAlign: 'center', margin: '0 0 20px', fontSize: 18, color: C.header }}>Leaderboard</h2>
+          <Leaderboard currentBracketId={bracketId} onViewBracket={handleViewBracket} />
+        </div>
+      </div>
+    );
+  }
+
+  // ── View bracket (read-only) ───────────────────────────────────────────────
+
+  if (view === 'view-bracket') {
+    return (
+      <div style={{ fontFamily: 'system-ui', minHeight: '100vh', background: '#f5f5f5' }}>
+        <Nav />
+        <div style={{ textAlign: 'center', padding: '12px 0', fontSize: 13, color: C.seed }}>
+          Viewing bracket — read only.{' '}
+          <button onClick={() => setView('leaderboard')} style={{ fontSize: 13, color: C.header, background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>
+            Back to leaderboard
+          </button>
+        </div>
+        <div style={{ width: '100%', overflowX: 'auto' }}>
+          <BracketDisplay
+            initialMatchups={viewMatchups}
+            onUpdateBracket={() => {}}
+            bracketName=''
+            onUpdateBracketName={() => {}}
+            totalScore={calculateScore(viewMatchups, games)}
+            useTestData={false}
+            onUpdateUseTestData={() => {}}
+            games={games}
+            tiebreakerScore=''
+            onUpdateTiebreakerScore={() => {}}
+            readOnly
+          />
+        </div>
+      </div>
+    );
+  }
+
+  // ── My bracket ─────────────────────────────────────────────────────────────
+
+  return (
+    <div style={{ fontFamily: 'system-ui', minHeight: '100vh', background: '#f5f5f5' }}>
+      <Nav />
+
+      {/* Save bar */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, padding: '10px 16px', background: '#fff', borderBottom: `1px solid ${C.border}` }}>
+        {locked ? (
+          <span style={{ fontSize: 13, color: C.seed }}>🔒 Bracket locked — submissions closed {deadlineLabel}</span>
+        ) : (
+          <>
+            <button
+              onClick={handleSaveBracket}
+              disabled={saving || !bracketName.trim()}
+              style={{ padding: '6px 18px', borderRadius: 4, background: C.header, color: '#fff', border: 'none', cursor: saving || !bracketName.trim() ? 'default' : 'pointer', fontSize: 13, opacity: saving || !bracketName.trim() ? 0.6 : 1 }}
+            >
+              {saving ? 'Saving...' : bracketId ? 'Update Bracket' : 'Save Bracket'}
+            </button>
+            {saveStatus === 'saved' && <span style={{ color: '#2a7a2a', fontSize: 13 }}>✓ Saved</span>}
+            {saveStatus === 'error' && <span style={{ color: '#b00000', fontSize: 13 }}>Save failed</span>}
+            {!bracketName.trim() && <span style={{ fontSize: 12, color: '#b00000' }}>Enter a bracket name to save</span>}
+          </>
+        )}
+      </div>
+
+      <div style={{ width: '100%', overflowX: 'auto' }}>
+        <BracketDisplay
+          initialMatchups={matchups}
+          onUpdateBracket={handleUpdateBracket}
+          bracketName={bracketName}
+          onUpdateBracketName={setBracketName}
+          totalScore={totalScore}
+          useTestData={useTestData}
+          onUpdateUseTestData={setUseTestData}
+          games={games}
+          tiebreakerScore={tiebreakerScore}
+          onUpdateTiebreakerScore={setTiebreakerScore}
+          readOnly={locked}
+        />
+      </div>
     </div>
+  );
+}
+
+// ─── NavBtn ───────────────────────────────────────────────────────────────────
+
+function NavBtn({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        background: active ? 'rgba(255,255,255,0.15)' : 'transparent',
+        color: '#fff',
+        border: 'none',
+        borderRadius: 4,
+        padding: '4px 12px',
+        fontSize: 13,
+        cursor: 'pointer',
+        fontWeight: active ? 700 : 400,
+      }}
+    >
+      {label}
+    </button>
   );
 }
