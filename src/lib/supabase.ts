@@ -4,7 +4,7 @@ const url = import.meta.env.VITE_SUPABASE_URL as string;
 const key = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
 
 console.log('SUPABASE URL:', url);
-console.log('SUPABASE ANON KEY:', key?.slice(0, 10));
+console.log('SUPABASE ANON KEY:', key?.slice(0, 5));
 
 export const supabase = createClient(url, key, {
   auth: {
