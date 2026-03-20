@@ -199,7 +199,7 @@ function regionHtml(name: string, matchups: Matchup[], games: GamesMap, dir: 'lt
 
 // ─── Main export ──────────────────────────────────────────────────────────────
 
-export function printBracket(matchups: Matchup[], games: GamesMap, bracketName: string, personName: string, totalScore: number) {
+export function printBracket(matchups: Matchup[], games: GamesMap, bracketName: string, personName: string, totalScore: number, tiebreakerScore?: string) {
   const east    = matchups.slice(0, 15);
   const west    = matchups.slice(15, 30);
   const south   = matchups.slice(30, 45);
@@ -259,6 +259,10 @@ export function printBracket(matchups: Matchup[], games: GamesMap, bracketName: 
           <span>Total</span>
           <span style="color:${C.points};">${totalScore} pts</span>
         </div>
+        ${tiebreakerScore ? `<div style="display:flex;justify-content:space-between;gap:12px;font-size:8px;padding-top:4px;color:#666;">
+          <span>Tiebreaker</span>
+          <span>${tiebreakerScore}</span>
+        </div>` : ''}
       </div>
     </div>`;
 
@@ -277,7 +281,7 @@ export function printBracket(matchups: Matchup[], games: GamesMap, bracketName: 
   </style>
 </head>
 <body>
-  <div style="width:${totalW}px;transform-origin:top left;transform:scale(${(7.5 * 96) / totalW});">
+  <div style="width:${totalW}px;transform-origin:top left;transform:scale(${(10 * 96) / totalW});">
     <div style="display:flex;flex-direction:row;align-items:flex-start;gap:0;">
       <div style="display:flex;flex-direction:column;gap:24px;">
         ${regionHtml('East', east, games, 'ltr')}

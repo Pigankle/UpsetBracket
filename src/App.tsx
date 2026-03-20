@@ -85,7 +85,7 @@ export default function App() {
   const [useTestData, setUseTestData] = useState(false);
   const [matchups, setMatchups] = useState<Matchup[]>(() => createInitialBracket(tournamentData));
   const [viewMatchups, setViewMatchups] = useState<Matchup[]>(() => createInitialBracket(tournamentData));
-  const [viewingBracketName, setViewingBracketName] = useState('');
+  const [viewingTiebreaker, setViewingTiebreaker] = useState<string>('');
   const [totalScore, setTotalScore] = useState(0);
   const [games, setGames] = useState<Record<string, Record<string, unknown>>>({});
   const [loading, setLoading] = useState(true);
@@ -192,6 +192,7 @@ export default function App() {
     const saved: SavedBracket = { name: data.bracket_name, picks: data.picks };
     setViewMatchups(createInitialBracket(tournamentData, saved));
     setViewingBracketName(`${data.person_name} — ${data.bracket_name}`);
+    setViewingTiebreaker(data.tiebreaker?.toString() ?? '');
     setView('view-bracket');
   };
 
@@ -306,7 +307,7 @@ export default function App() {
           Back to leaderboard
         </button>
         <button
-          onClick={() => printBracket(viewMatchups, games, viewingBracketName, '', calculateScore(viewMatchups, games))}
+          onClick={() => printBracket(viewMatchups, games, viewingBracketName, '', calculateScore(viewMatchups, games), viewingTiebreaker)}
           style={{ padding: '4px 12px', borderRadius: 4, background: '#fff', color: C.header, border: `1px solid ${C.border}`, fontSize: 12, cursor: 'pointer' }}
         >
           🖨 Print
@@ -344,7 +345,7 @@ export default function App() {
           ← My Brackets
         </button>
         <button
-          onClick={() => printBracket(matchups, games, bracketName, profile.display_name, totalScore)}
+          onClick={() => printBracket(matchups, games, bracketName, profile.display_name, totalScore, tiebreakerScore)}
           style={{ padding: '6px 14px', borderRadius: 4, background: '#fff', color: C.header, border: `1px solid ${C.border}`, fontSize: 13, cursor: 'pointer' }}
         >
           🖨 Print
