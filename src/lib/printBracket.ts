@@ -42,7 +42,7 @@ function calcPts(g: GameRecord): number {
 
 function ptsCircle(pts: number, dir: 'ltr' | 'rtl' = 'ltr'): string {
   const color = pts > 0 ? C.points : C.pointsNeg;
-  const side = dir === 'rtl' ? 'left:-10px' : 'right:-10px';
+  const side = dir === 'rtl' ? 'left:4px' : 'right:4px';
   return `<div style="position:absolute;top:50%;${side};transform:translateY(-50%);width:18px;height:18px;border-radius:50%;border:1.5px solid ${color};background:#fff;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;color:${color};z-index:2;">+${pts}</div>`;
 }
 
@@ -277,7 +277,7 @@ export function printBracket(matchups: Matchup[], games: GamesMap, bracketName: 
   </style>
 </head>
 <body>
-  <div style="width:${totalW}px;transform-origin:top left;transform:scale(${(10.2 * 96) / totalW});">
+  <div style="width:${totalW}px;transform-origin:top left;transform:scale(${(7.5 * 96) / totalW});">
     <div style="display:flex;flex-direction:row;align-items:flex-start;gap:0;">
       <div style="display:flex;flex-direction:column;gap:24px;">
         ${regionHtml('East', east, games, 'ltr')}
