@@ -3,8 +3,8 @@ import type { Matchup } from '../utils/bracketTransform';
 type GamesMap = Record<string, Record<string, unknown>>;
 
 // ─── Layout constants (must match BracketDisplay) ─────────────────────────────
-const CARD_H = 48;
-const CARD_GAP = 6;
+const CARD_H = 56;
+const CARD_GAP = 8;
 const ROUND_W = 136;
 const CONNECTOR_W = 16;
 const SLOT = CARD_H + CARD_GAP;
@@ -74,16 +74,23 @@ function ptsHtml(matchup: Matchup, games: GamesMap): string {
   return `<div style="height:14px;text-align:right;padding-right:2px;font-size:9px;font-weight:700;color:${pts > 0 ? C.points : C.pointsNeg};">+${pts}</div>`;
 }
 
-function cardHtml(matchup: Matchup, top: number, round: number, games: GamesMap): string {
+function cardHtml(matchup: Matchup, top: number, round: number, games: GamesMap, dir: 'ltr' | 'rtl' = 'ltr'): string {
   const { top: t, bottom: b } = getTeams(matchup);
-  const pts = ptsHtml(matchup, games);
+  let pts: number | null = null;
+  if (matchup.winner) {
+    const result = games[matchup.gameCode];
+    if (result && result['Game Status'] === 'Final') {
+      const w = matchup.winner === 'top' ? matchup.topTeam : matchup.bottomTeam;
+      pts = result['Winning Team'] === w.name ? calcPts(result) : 0;
+    }
+  }
   return `
-    <div style="position:absolute;top:${top}px;left:0;width:${ROUND_W}px;">
-      ${pts}
-      <div style="width:${ROUND_W}px;height:${CARD_H}px;background:#fff;border:1px solid ${C.cardBorder};border-radius:4px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 1px 2px rgba(0,0,0,0.07);">
+    <div style="position:absolute;top:${top}px;left:0;width:${ROUND_W}px;position:relative;">
+      <div style="width:${ROUND_W}px;height:${CARD_H}px;background:#fff;border:1px solid ${C.cardBorder};border-radius:4px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 1px 2px rgba(0,0,0,0.07);position:relative;">
         ${teamRowHtml(t, 'top', matchup.winner === 'top', matchup.gameCode, round, games)}
         <div style="height:1px;background:${C.divider};flex-shrink:0;"></div>
         ${teamRowHtml(b, 'bottom', matchup.winner === 'bottom', matchup.gameCode, round, games)}
+        ${pts !== null ? ptsCircle(pts, dir) : ''}
       </div>
     </div>`;
 }
@@ -112,8 +119,8 @@ function connectorSvg(fromRound: number, dir: 'ltr' | 'rtl'): string {
   return `<svg width="${w}" height="${REGION_H}" style="flex-shrink:0;display:block;overflow:visible;">${lines}</svg>`;
 }
 
-function roundColHtml(matchups: Matchup[], roundIdx: number, label: string, games: GamesMap): string {
-  const cards = matchups.map((m, i) => cardHtml(m, cardTop(roundIdx, i), roundIdx, games)).join('');
+function roundColHtml(matchups: Matchup[], roundIdx: number, label: string, games: GamesMap, dir: 'ltr' | 'rtl' = 'ltr'): string {
+  const cards = matchups.map((m, i) => cardHtml(m, cardTop(roundIdx, i), roundIdx, games, dir)).join('');
   return `
     <div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0;">
       <div style="font-size:8px;color:${C.seed};margin-bottom:3px;white-space:nowrap;font-weight:600;letter-spacing:0.03em;">${label}</div>
@@ -123,7 +130,7 @@ function roundColHtml(matchups: Matchup[], roundIdx: number, label: string, game
 
 function regionHtml(name: string, matchups: Matchup[], games: GamesMap, dir: 'ltr' | 'rtl'): string {
   const rounds = [matchups.slice(0,8), matchups.slice(8,12), matchups.slice(12,14), matchups.slice(14,15)];
-  const cols = ROUND_LABELS.map((label, i) => roundColHtml(rounds[i], i, label, games));
+  const cols = ROUND_LABELS.map((label, i) => roundColHtml(rounds[i], i, label, games, dir));
 
   let children = '';
   const connGap = `<div style="display:flex;align-items:flex-start;padding-top:16px;">`;
@@ -166,7 +173,20 @@ function finalCardHtml(matchup: Matchup, games: GamesMap, round: number): string
     </div>`;
 }
 
+// ─── Scoring helper ───────────────────────────────────────────────────────────
+
+function calcPts(g: GameRecord): number {
+  const winnerSeed = g['Winning Team Seed'] as number ?? 0;
+  const loserSeed = g['Losing Team Seed'] as number ?? 0;
+  const multiplier = Math.max(1, winnerSeed - loserSeed);
+  return (g.points as number) * multiplier;
+}
+
 // ─── Main export ──────────────────────────────────────────────────────────────
+
+function range(a: number, b: number) {
+  return Array.from({ length: b - a }, (_, i) => i + a);
+}
 
 export function printBracket(matchups: Matchup[], games: GamesMap, bracketName: string, personName: string, totalScore: number) {
   const east    = matchups.slice(0, 15);
@@ -214,7 +234,7 @@ export function printBracket(matchups: Matchup[], games: GamesMap, bracketName: 
   </style>
 </head>
 <body>
-  <div style="width:${totalW}px;transform-origin:top left;transform:scale(${(10.5 * 96) / totalW});">
+  <div style="width:${totalW}px;transform-origin:top left;transform:scale(${(10.2 * 96) / totalW});">
     <div style="display:flex;flex-direction:row;align-items:flex-start;gap:0;">
       <div style="display:flex;flex-direction:column;gap:24px;">
         ${regionHtml('East', east, games, 'ltr')}
