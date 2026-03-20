@@ -104,7 +104,8 @@ export default function App() {
   };
 
   const handleResultsChanged = async () => {
-    await supabase.rpc('recalculate_all_scores');
+    const { error } = await supabase.rpc('recalculate_all_scores');
+    if (error) console.error('recalculate_all_scores failed:', error);
     await loadResults();
   };
 
