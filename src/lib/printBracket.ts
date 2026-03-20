@@ -1,8 +1,12 @@
 import type { Matchup } from '../utils/bracketTransform';
 
+// ─── Types ────────────────────────────────────────────────────────────────────
+
 type GamesMap = Record<string, Record<string, unknown>>;
+type GameRecord = Record<string, unknown>;
 
 // ─── Layout constants (must match BracketDisplay) ─────────────────────────────
+
 const CARD_H = 56;
 const CARD_GAP = 8;
 const ROUND_W = 136;
@@ -17,6 +21,7 @@ const cardTop = (r: number, i: number) => {
 };
 
 // ─── Colours ──────────────────────────────────────────────────────────────────
+
 const C = {
   header: '#1a1a2e', headerText: '#fff',
   cardBorder: '#ccc', divider: '#e0e0e0',
@@ -26,6 +31,24 @@ const C = {
   points: '#1a6e1a', pointsNeg: '#b00000',
   connector: '#999',
 };
+
+// ─── Scoring helpers ──────────────────────────────────────────────────────────
+
+function calcPts(g: GameRecord): number {
+  const winnerSeed = g['Winning Team Seed'] as number ?? 0;
+  const loserSeed = g['Losing Team Seed'] as number ?? 0;
+  return (g.points as number) * Math.max(1, winnerSeed - loserSeed);
+}
+
+function ptsCircle(pts: number, dir: 'ltr' | 'rtl' = 'ltr'): string {
+  const color = pts > 0 ? C.points : C.pointsNeg;
+  const side = dir === 'rtl' ? 'left:-10px' : 'right:-10px';
+  return `<div style="position:absolute;top:50%;${side};transform:translateY(-50%);width:18px;height:18px;border-radius:50%;border:1.5px solid ${color};background:#fff;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;color:${color};z-index:2;">+${pts}</div>`;
+}
+
+function range(a: number, b: number) {
+  return Array.from({ length: b - a }, (_, i) => i + a);
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -47,15 +70,14 @@ function teamRowHtml(
   const isTbd = team.name === 'TBD';
   let bg = 'transparent', color = C.text, strike = '', checkmark = '';
 
-  if (result && !isTbd) {
-    const actual = position === 'top' ? result['Top Team'] : result['Bottom Team'];
-    const winner = result['Winning Team'];
-    const bothNull = result['Top Team'] === null && result['Bottom Team'] === null;
-    if (!bothNull && round > 0) {
-      if (team.name === actual) { bg = C.correct; color = C.correctText; }
-      else if (actual !== null) { bg = C.incorrect; color = C.incorrectText; strike = 'text-decoration:line-through;'; }
+  if (!isTbd && result && result['Game Status'] === 'Final') {
+    if (result['Winning Team'] === team.name) {
+      bg = C.correct; color = C.correctText; checkmark = ' ✓';
+    } else if (result['Losing Team'] === team.name) {
+      bg = C.incorrect; color = C.incorrectText; strike = 'text-decoration:line-through;';
     }
-    if (winner === team.name) checkmark = ' ✓';
+  } else if (isTbd) {
+    bg = '#ffffc5';
   }
 
   return `
@@ -65,14 +87,7 @@ function teamRowHtml(
     </div>`;
 }
 
-function ptsHtml(matchup: Matchup, games: GamesMap): string {
-  if (!matchup.winner) return '';
-  const result = games[matchup.gameCode];
-  if (!result) return '';
-  const w = matchup.winner === 'top' ? matchup.topTeam : matchup.bottomTeam;
-  const pts = result['Winning Team'] === w.name ? (result.points as number) ?? 0 : 0;
-  return `<div style="height:14px;text-align:right;padding-right:2px;font-size:9px;font-weight:700;color:${pts > 0 ? C.points : C.pointsNeg};">+${pts}</div>`;
-}
+// ─── Card renderers ───────────────────────────────────────────────────────────
 
 function cardHtml(matchup: Matchup, top: number, round: number, games: GamesMap, dir: 'ltr' | 'rtl' = 'ltr'): string {
   const { top: t, bottom: b } = getTeams(matchup);
@@ -85,7 +100,7 @@ function cardHtml(matchup: Matchup, top: number, round: number, games: GamesMap,
     }
   }
   return `
-    <div style="position:absolute;top:${top}px;left:0;width:${ROUND_W}px;position:relative;">
+    <div style="position:absolute;top:${top}px;left:0;width:${ROUND_W}px;">
       <div style="width:${ROUND_W}px;height:${CARD_H}px;background:#fff;border:1px solid ${C.cardBorder};border-radius:4px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 1px 2px rgba(0,0,0,0.07);position:relative;">
         ${teamRowHtml(t, 'top', matchup.winner === 'top', matchup.gameCode, round, games)}
         <div style="height:1px;background:${C.divider};flex-shrink:0;"></div>
@@ -94,6 +109,30 @@ function cardHtml(matchup: Matchup, top: number, round: number, games: GamesMap,
       </div>
     </div>`;
 }
+
+function finalCardHtml(matchup: Matchup, games: GamesMap, round: number): string {
+  const { top: t, bottom: b } = getTeams(matchup);
+  let pts: number | null = null;
+  if (matchup.winner) {
+    const result = games[matchup.gameCode];
+    if (result && result['Game Status'] === 'Final') {
+      const w = matchup.winner === 'top' ? matchup.topTeam : matchup.bottomTeam;
+      pts = result['Winning Team'] === w.name ? calcPts(result) : 0;
+    }
+  }
+  return `
+    <div style="width:${ROUND_W}px;">
+      <div style="font-size:9px;color:${C.seed};text-align:center;margin-bottom:3px;">${matchup.gameCode}</div>
+      <div style="width:${ROUND_W}px;height:${CARD_H}px;background:#fff;border:1px solid ${C.cardBorder};border-radius:4px;overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,0.07);display:flex;flex-direction:column;position:relative;">
+        ${teamRowHtml(t, 'top', matchup.winner === 'top', matchup.gameCode, round, games)}
+        <div style="height:1px;background:${C.divider};"></div>
+        ${teamRowHtml(b, 'bottom', matchup.winner === 'bottom', matchup.gameCode, round, games)}
+        ${pts !== null ? ptsCircle(pts) : ''}
+      </div>
+    </div>`;
+}
+
+// ─── Connector SVG ────────────────────────────────────────────────────────────
 
 function connectorSvg(fromRound: number, dir: 'ltr' | 'rtl'): string {
   const count = 8 >> fromRound;
@@ -119,6 +158,8 @@ function connectorSvg(fromRound: number, dir: 'ltr' | 'rtl'): string {
   return `<svg width="${w}" height="${REGION_H}" style="flex-shrink:0;display:block;overflow:visible;">${lines}</svg>`;
 }
 
+// ─── Round / Region renderers ─────────────────────────────────────────────────
+
 function roundColHtml(matchups: Matchup[], roundIdx: number, label: string, games: GamesMap, dir: 'ltr' | 'rtl' = 'ltr'): string {
   const cards = matchups.map((m, i) => cardHtml(m, cardTop(roundIdx, i), roundIdx, games, dir)).join('');
   return `
@@ -133,17 +174,17 @@ function regionHtml(name: string, matchups: Matchup[], games: GamesMap, dir: 'lt
   const cols = ROUND_LABELS.map((label, i) => roundColHtml(rounds[i], i, label, games, dir));
 
   let children = '';
-  const connGap = `<div style="display:flex;align-items:flex-start;padding-top:16px;">`;
+  const gap = `<div style="display:flex;align-items:flex-start;padding-top:16px;">`;
 
   if (dir === 'ltr') {
     cols.forEach((col, i) => {
       children += col;
-      if (i < 3) children += connGap + connectorSvg(i, 'ltr') + '</div>';
+      if (i < 3) children += gap + connectorSvg(i, 'ltr') + '</div>';
     });
   } else {
     [...cols].reverse().forEach((col, i) => {
       children += col;
-      if (i < 3) children += connGap + connectorSvg(3 - i - 1, 'rtl') + '</div>';
+      if (i < 3) children += gap + connectorSvg(3 - i - 1, 'rtl') + '</div>';
     });
   }
 
@@ -156,37 +197,7 @@ function regionHtml(name: string, matchups: Matchup[], games: GamesMap, dir: 'lt
     </div>`;
 }
 
-function finalCardHtml(matchup: Matchup, games: GamesMap, round: number): string {
-  const { top: t, bottom: b } = getTeams(matchup);
-  const result = games[matchup.gameCode];
-  const winner = result ? result['Winning Team'] as string | null : null;
-  const pts = ptsHtml(matchup, games);
-  return `
-    <div style="width:${ROUND_W}px;">
-      <div style="font-size:8px;color:${C.seed};text-align:center;margin-bottom:3px;">${matchup.gameCode}</div>
-      ${pts}
-      <div style="width:${ROUND_W}px;height:${CARD_H}px;background:#fff;border:1px solid ${C.cardBorder};border-radius:4px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 1px 2px rgba(0,0,0,0.07);">
-        ${teamRowHtml(t, 'top', matchup.winner === 'top', matchup.gameCode, round, games)}
-        <div style="height:1px;background:${C.divider};"></div>
-        ${teamRowHtml(b, 'bottom', matchup.winner === 'bottom', matchup.gameCode, round, games)}
-      </div>
-    </div>`;
-}
-
-// ─── Scoring helper ───────────────────────────────────────────────────────────
-
-function calcPts(g: GameRecord): number {
-  const winnerSeed = g['Winning Team Seed'] as number ?? 0;
-  const loserSeed = g['Losing Team Seed'] as number ?? 0;
-  const multiplier = Math.max(1, winnerSeed - loserSeed);
-  return (g.points as number) * multiplier;
-}
-
 // ─── Main export ──────────────────────────────────────────────────────────────
-
-function range(a: number, b: number) {
-  return Array.from({ length: b - a }, (_, i) => i + a);
-}
 
 export function printBracket(matchups: Matchup[], games: GamesMap, bracketName: string, personName: string, totalScore: number) {
   const east    = matchups.slice(0, 15);
@@ -196,6 +207,34 @@ export function printBracket(matchups: Matchup[], games: GamesMap, bracketName: 
   const ff1 = matchups.find(m => m.gameCode === 'FF1')!;
   const ff2 = matchups.find(m => m.gameCode === 'FF2')!;
   const ch1 = matchups.find(m => m.gameCode === 'CH1')!;
+
+  // Round scores
+  const ROUND_NAMES = ['Round of 64', 'Round of 32', 'Sweet 16', 'Elite Eight', 'Final Four', 'Championship'];
+  const roundScores = Array(6).fill(0);
+  const r64 = new Set([...range(0,8), ...range(15,23), ...range(30,38), ...range(45,53)]);
+  const r32 = new Set([...range(8,12), ...range(23,27), ...range(38,42), ...range(53,57)]);
+  const s16 = new Set([12,13,27,28,42,43,57,58]);
+  const e8  = new Set([14,29,44,59]);
+  matchups.forEach((m, idx) => {
+    if (!m.winner) return;
+    const w = m.winner === 'top' ? m.topTeam : m.bottomTeam;
+    const g = games[m.gameCode];
+    if (!g || g['Winning Team'] !== w.name || g['Game Status'] !== 'Final') return;
+    const pts = calcPts(g);
+    if (r64.has(idx)) roundScores[0] += pts;
+    else if (r32.has(idx)) roundScores[1] += pts;
+    else if (s16.has(idx)) roundScores[2] += pts;
+    else if (e8.has(idx)) roundScores[3] += pts;
+    else if (idx === 60 || idx === 61) roundScores[4] += pts;
+    else if (idx === 62) roundScores[5] += pts;
+  });
+
+  const roundScoreRows = ROUND_NAMES.map((name, i) =>
+    `<div style="display:flex;justify-content:space-between;gap:12px;font-size:8px;padding:1px 0;">
+      <span style="color:#666;">${name}</span>
+      <span style="font-weight:600;color:${roundScores[i] > 0 ? C.points : '#666'};">${roundScores[i]}</span>
+    </div>`
+  ).join('');
 
   const chWinner = ch1.winner ? (ch1.winner === 'top' ? ch1.topTeam.name : ch1.bottomTeam.name) : null;
 
@@ -214,13 +253,17 @@ export function printBracket(matchups: Matchup[], games: GamesMap, bracketName: 
       </div>
       ${finalCardHtml(ch1, games, 4)}
       ${chWinner ? `<div style="text-align:center;font-size:12px;font-weight:700;">🏆 ${chWinner}</div>` : ''}
-      <div style="font-size:11px;font-weight:700;color:${C.points};margin-top:4px;">Score: ${totalScore} pts</div>
+      <div style="width:100%;border-top:1px solid #e0e0e0;padding-top:6px;margin-top:4px;">
+        ${roundScoreRows}
+        <div style="display:flex;justify-content:space-between;gap:12px;font-size:9px;font-weight:700;padding-top:4px;border-top:1px solid #e0e0e0;margin-top:4px;">
+          <span>Total</span>
+          <span style="color:${C.points};">${totalScore} pts</span>
+        </div>
+      </div>
     </div>`;
 
-  // Full bracket width: 4 regions × (4 rounds × (ROUND_W + CONNECTOR_W)) + center
-  // Each region: 4 cols of ROUND_W + 3 connectors of CONNECTOR_W
   const regionW = 4 * ROUND_W + 3 * CONNECTOR_W;
-  const totalW = 2 * regionW + 220; // left pair + right pair + center
+  const totalW = 2 * regionW + 220;
 
   const html = `<!DOCTYPE html>
 <html>
