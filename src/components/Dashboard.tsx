@@ -66,7 +66,7 @@ export default function Dashboard({ profile, onOpenBracket, onNewBracket }: Dash
   const canAddMore = profile.is_admin || (!locked && brackets.length < MAX_BRACKETS);
 
   return (
-    <div style={{ maxWidth: 600, margin: '40px auto', padding: '0 16px', fontFamily: 'system-ui' }}>
+    <div style={{ maxWidth: 600, margin: '40px auto', padding: '0 16px', fontFamily: 'system-ui', width: '100%' }}>
       <h2 style={{ color: C.header, margin: '0 0 4px' }}>Welcome, {profile.display_name}</h2>
       <p style={{ color: C.seed, fontSize: 13, margin: '0 0 24px' }}>
         {locked

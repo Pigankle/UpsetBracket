@@ -127,7 +127,8 @@ function TeamRow({ team, position, isWinner, gameCode, round, games, onClick, re
       onClick={readOnly || isTbd ? undefined : onClick}
       style={{
         display: 'flex', alignItems: 'center', gap: 6,
-        padding: '0 8px', height: 26, background: bg,
+        padding: '0 8px', height: 26,
+        background: isTbd ? '#ffffc5' : bg,
         cursor: readOnly || isTbd ? 'default' : 'pointer',
         userSelect: 'none',
       }}

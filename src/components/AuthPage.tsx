@@ -58,9 +58,9 @@ export default function AuthPage({ onViewLeaderboard }: AuthPageProps) {
   };
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f5f5f5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'system-ui' }}>
+    <div style={{ minHeight: '100vh', background: '#f5f5f5', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', fontFamily: 'system-ui' }}>
       <div style={{ background: '#fff', borderRadius: 8, padding: 32, width: 360, boxShadow: '0 2px 12px rgba(0,0,0,0.1)' }}>
-        <h2 style={{ margin: '0 0 4px', fontSize: 20, color: C.header }}>🏀 McKenzie's Upset Chaos 2026</h2>
+        <h2 style={{ margin: '0 0 4px', fontSize: 20, color: C.header }}>🏀 2026 Bracket Pool</h2>
         <p style={{ margin: '0 0 24px', fontSize: 13, color: C.seed }}>
           {mode === 'login' && 'Sign in to your account.'}
           {mode === 'register' && 'Create a new account.'}

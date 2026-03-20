@@ -233,7 +233,7 @@ export default function App() {
     if (view === 'leaderboard') return (
       <div style={{ minHeight: '100vh', background: '#f5f5f5', fontFamily: 'system-ui' }}>
         <PublicNav onLogin={() => setView('leaderboard')} />
-        <div style={{ padding: '24px 16px' }}>
+        <div style={{ padding: '24px 16px', width: '100%' }}>
           <h2 style={{ textAlign: 'center', margin: '0 0 20px', fontSize: 18, color: C.header }}>Leaderboard</h2>
           <Leaderboard currentBracketId={null} onViewBracket={handleViewBracket} />
         </div>
